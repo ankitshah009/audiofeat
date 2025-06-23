@@ -5,6 +5,7 @@ import torchaudio
 from audiofeat import (
     rms,
     fundamental_frequency_autocorr,
+    fundamental_frequency_yin,
     spectral_entropy,
     spectral_rolloff,
     pitch_strength,
@@ -28,6 +29,7 @@ def main(audio_path: str):
     features = {}
     features["rms"] = rms(waveform, frame_length, hop_length)
     features["f0"] = fundamental_frequency_autocorr(waveform, fs, frame_length, hop_length)
+    features["f0_yin"] = fundamental_frequency_yin(waveform, fs, frame_length, hop_length)
     features["spectral_entropy"] = spectral_entropy(waveform[:frame_length], 1024)
     features["spectral_rolloff"] = spectral_rolloff(waveform[:frame_length], fs)
     features["pitch_strength"] = pitch_strength(waveform, fs, frame_length, hop_length)
