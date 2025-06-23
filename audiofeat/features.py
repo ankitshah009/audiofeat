@@ -277,3 +277,59 @@ def maximum_flow_declination_rate(flow: torch.Tensor, fs: int):
     dflow = torch.diff(flow) * fs
     return dflow.max()
 
+
+def speech_rate(x: torch.Tensor, fs: int, threshold_ratio: float = 0.3, min_gap: float = 0.1):
+    """Estimate speech rate in syllables per second."""
+    env = torch.abs(x)
+    win_len = max(1, int(0.02 * fs))
+    kernel = torch.ones(win_len, device=x.device) / win_len
+    env = torch.nn.functional.conv1d(env.view(1,1,-1), kernel.view(1,1,-1), padding=win_len//2).squeeze()
+    threshold = env.mean() * threshold_ratio
+    peaks = (env[1:-1] > env[:-2]) & (env[1:-1] > env[2:]) & (env[1:-1] > threshold)
+    indices = torch.nonzero(peaks).squeeze() + 1
+    if indices.numel() == 0:
+        return torch.tensor(0.0, device=x.device)
+    keep = torch.cat([torch.tensor([True], device=x.device), (indices[1:] - indices[:-1]) > int(min_gap * fs)])
+    syllables = indices[keep]
+    return syllables.numel() / (x.numel() / fs)
+
+
+def nasality_index(nasal: torch.Tensor, oral: torch.Tensor, fs: int, n_fft: int = 1024):
+    """Compute nasality index from nasal and oral microphone signals."""
+    N = torch.fft.rfft(nasal * hann_window(nasal.numel()).to(nasal.device), n=n_fft)
+    O = torch.fft.rfft(oral * hann_window(oral.numel()).to(oral.device), n=n_fft)
+    freqs = torch.linspace(0, fs / 2, N.numel(), device=nasal.device)
+    mask = (freqs >= 300) & (freqs <= 800)
+    n_power = (N.abs() ** 2)[mask].sum()
+    o_power = (O.abs() ** 2)[mask].sum()
+    return 10 * torch.log10((n_power + 1e-8) / (o_power + 1e-8))
+
+
+def speed_quotient(open_times: torch.Tensor, close_times: torch.Tensor):
+    """Speed quotient from glottal flow opening and closing times."""
+    return (open_times.mean() / (close_times.mean() + 1e-8))
+
+
+def vocal_fry_index(f0: torch.Tensor):
+    """Ratio of fry frames to voiced frames based on F0 and period variation."""
+    voiced = f0 > 0
+    if voiced.sum() < 2:
+        return torch.tensor(0.0, device=f0.device)
+    periods = torch.where(voiced, 1.0 / (f0 + 1e-8), 0.0)
+    diffs = torch.abs(periods[1:] - periods[:-1]) / (periods[:-1] + 1e-8)
+    fry = (f0[:-1] < 70) & (diffs > 0.2)
+    voiced_frames = voiced[:-1]
+    return fry.sum().float() / (voiced_frames.sum().float() + 1e-8)
+
+
+def sibilant_spectral_peak_frequency(x: torch.Tensor, fs: int, n_fft: int = 1024):
+    """Peak frequency of sibilant energy between 3 and 12 kHz."""
+    X = torch.fft.rfft(x * hann_window(x.numel()).to(x.device), n=n_fft)
+    P = X.abs() ** 2
+    freqs = torch.linspace(0, fs / 2, P.numel(), device=x.device)
+    mask = (freqs >= 3000) & (freqs <= 12000)
+    if mask.sum() == 0:
+        return torch.tensor(0.0, device=x.device)
+    peak_idx = P[mask].argmax()
+    return freqs[mask][peak_idx]
+
