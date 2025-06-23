@@ -11,6 +11,7 @@ def frame_signal(x: torch.Tensor, frame_length: int, hop_length: int):
 
 
 def hann_window(L: int):
+    """Return an L-point Hann window."""
     n = torch.arange(L, dtype=torch.float32)
     return 0.5 * (1 - torch.cos(2 * np.pi * n / (L - 1)))
 
@@ -45,6 +46,7 @@ def spectral_entropy(x: torch.Tensor, n_fft: int):
 
 
 def spectral_rolloff(x: torch.Tensor, fs: int, roll_percent=0.95, n_fft=1024):
+    """Frequency below which `roll_percent` of spectral energy is contained."""
     X = torch.fft.rfft(x * hann_window(x.numel()).to(x.device), n=n_fft)
     power = X.abs() ** 2
     cumulative = torch.cumsum(power, dim=0)
@@ -59,6 +61,7 @@ def spectral_flux(prev_mag: torch.Tensor, cur_mag: torch.Tensor):
 
 
 def pitch_strength(x: torch.Tensor, fs: int, frame_length: int, hop_length: int):
+    """Normalized autocorrelation peak strength as a measure of pitch clarity."""
     frames = frame_signal(x, frame_length, hop_length)
     w = hann_window(frame_length).to(x.device)
     win = frames * w
@@ -95,6 +98,7 @@ def spectral_skewness(x: torch.Tensor, n_fft: int):
 
 
 def low_high_energy_ratio(x: torch.Tensor, fs: int, n_fft: int = 1024):
+    """Ratio of energy below 1 kHz to that above 3 kHz."""
     X = torch.fft.rfft(x * hann_window(x.numel()).to(x.device), n=n_fft)
     P = X.abs() ** 2
     freqs = torch.linspace(0, fs / 2, P.numel(), device=x.device)
@@ -114,6 +118,7 @@ def amplitude_modulation_depth(env: torch.Tensor, window: int):
 
 
 def spectral_flux_frames(x: torch.Tensor, n_fft: int, hop: int):
+    """Frame-wise spectral flux for a signal."""
     frames = frame_signal(x, n_fft, hop)
     w = hann_window(n_fft).to(x.device)
     specs = torch.fft.rfft(frames * w, n=n_fft)
