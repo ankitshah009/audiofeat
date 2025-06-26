@@ -17,7 +17,7 @@
 
 ### Spectral Features
 - **Spectral Centroid:** Represents the "center of mass" of the spectrum, indicating dominant frequencies.
-- **Spectral Rolloff:** The frequency below which a certain percentage of the total spectral energy is concentrated.
+- **Spectral Rolloff:** The frequency below which a certain percentage of the total spectral energy is concentrated. Configurable `rolloff_percent` (e.g., 0.85, 0.90, 0.95).
 - **Spectral Flux:** Measures the rate of change of the power spectrum.
 - **Spectral Flatness:** Quantifies how noise-like a sound is, using a `torch`-native geometric mean.
 - **Spectral Entropy:** Measures the randomness or unpredictability of the spectrum.
@@ -70,6 +70,14 @@
 
 ### Tonal and Musical Features
 - **Tonnetz (Tonal Centroid Features):** A 6-dimensional representation of tonal space based on music theory.
+
+### Statistical Functionals
+- **Mean:** Average value of a feature over time.
+- **Standard Deviation:** Variability of a feature over time.
+- **Min:** Minimum value of a feature over time.
+- **Max:** Maximum value of a feature over time.
+- **Skewness:** Asymmetry of the feature distribution over time.
+- **Kurtosis:** Peakiness of the feature distribution over time.
 
 ## Installation
 

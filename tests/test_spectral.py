@@ -33,6 +33,11 @@ def test_spectral_rolloff():
     assert isinstance(result, torch.Tensor)
     assert result.shape[0] > 0
 
+    # Test with a different rolloff_percent
+    result_90 = spectral_rolloff(audio_data, rolloff_percent=0.90)
+    assert isinstance(result_90, torch.Tensor)
+    assert result_90.shape[0] > 0
+
 def test_spectral_flux():
     audio_data = torch.randn(22050 * 5) # 5 seconds of audio
     result = spectral_flux(audio_data)
