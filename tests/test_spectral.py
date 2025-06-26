@@ -1,4 +1,3 @@
-
 import torch
 import pytest
 from audiofeat.spectral.centroid import spectral_centroid
