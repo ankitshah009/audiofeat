@@ -1,4 +1,3 @@
-
 import torch
 import pytest
 from audiofeat.spectral.centroid import spectral_centroid
@@ -161,7 +160,7 @@ def test_chroma():
     audio_data = torch.randn(22050 * 5)
     result = chroma(audio_data, sample_rate=22050)
     assert isinstance(result, torch.Tensor)
-    assert result.shape[0] > 0
+    assert result.shape[0] == 12
     assert result.shape[1] > 0
 
 def test_tonnetz():

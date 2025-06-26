@@ -33,6 +33,7 @@
 - **Linear Spectrogram (STFT):** Visual representation of the spectrum of frequencies over time.
 - **Mel Spectrogram:** Spectrogram with a Mel-scaled frequency axis, mimicking human auditory perception.
 - **CQT Spectrogram (Constant-Q Transform):** Spectrogram with logarithmically spaced frequency bins. (Note: This is a simplified `torch`-native implementation and not a full, optimized CQT).
+- **Chroma Features:** Represents the intensity of the 12 different pitch classes of the Western musical scale.
 
 ### Cepstral Features
 - **LPCC (Linear Predictive Cepstral Coefficients):** Cepstral coefficients derived from Linear Predictive Coding (LPC) analysis. (Note: This is a placeholder implementation and needs a proper LPC solver).
@@ -44,6 +45,7 @@
 - **Fundamental Frequency (F0) Autocorrelation:** Estimates F0 via autocorrelation.
 - **Fundamental Frequency (F0) YIN:** Estimates F0 using the YIN algorithm.
 - **Semitone Standard Deviation:** Standard deviation of F0 in semitones.
+- **Pitch Strength:** Measures the strength of periodicity in a signal.
 
 ### Voice Features
 - **Jitter:** Cycle-to-cycle F0 variation.
@@ -65,7 +67,6 @@
 - **Harmonic Differences (e.g., H1-H2, H1-A3):** Ratios between the amplitudes of specific harmonics. (Note: This is a placeholder implementation).
 
 ### Tonal and Musical Features
-- **Chroma Features:** A 12-element feature vector representing the total energy within each of the 12 pitch classes. (Note: This is a placeholder implementation).
 - **Tonnetz (Tonal Centroid Features):** A 6-dimensional representation of tonal space based on music theory. (Note: This is a placeholder implementation).
 
 ## Installation
