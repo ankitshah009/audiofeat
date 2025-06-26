@@ -1,4 +1,3 @@
-
 import torch
 from ..temporal.rms import frame_signal
 
@@ -26,7 +25,7 @@ def speech_rate(x: torch.Tensor, fs: int, threshold_ratio: float = 0.3, min_gap:
     peaks = (env[1:-1] > env[:-2]) & (env[1:-1] > env[2:]) & (env[1:-1] > threshold)
     indices = torch.nonzero(peaks).squeeze() + 1
     if indices.numel() == 0:
-        return torch.tensor(0.0, device=x.device)
+        return 0.0
     keep = torch.cat([torch.tensor([True], device=x.device), (indices[1:] - indices[:-1]) > int(min_gap * fs)])
     syllables = indices[keep]
-    return syllables.numel() / (x.numel() / fs)
+    return float(syllables.numel()) / (x.numel() / fs)

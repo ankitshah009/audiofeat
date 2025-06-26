@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: audiofeat
+Version: 0.1.0
+Requires-Dist: numpy
+Requires-Dist: scipy
+Requires-Dist: torch
+Requires-Dist: torchaudio

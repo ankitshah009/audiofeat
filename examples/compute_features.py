@@ -4,7 +4,7 @@ import audiofeat
 
 # Create a dummy audio signal
 sample_rate = 22050
-duration = 5
+duration = 10 # Increased duration
 audio_data = torch.randn(sample_rate * duration)
 
 # Compute features
@@ -51,6 +51,13 @@ formant_bandwidths = audiofeat.formant_bandwidths(torch.randn(10), fs=sample_rat
 formant_dispersion = audiofeat.formant_dispersion(torch.randn(10))
 sibilant_spectral_peak_frequency = audiofeat.sibilant_spectral_peak_frequency(audio_data, fs=sample_rate)
 
+# Spectrograms
+linear_spec = audiofeat.linear_spectrogram(audio_data)
+mel_spec = audiofeat.mel_spectrogram(audio_data, sample_rate)
+
+# MFCCs
+mfccs = audiofeat.mfcc(audio_data, sample_rate)
+
 
 # Print the first 5 values of each feature
 print("RMS:", rms[:5])
@@ -75,3 +82,6 @@ print("Formant Frequencies:", formant_frequencies)
 print("Formant Bandwidths:", formant_bandwidths)
 print("Formant Dispersion:", formant_dispersion)
 print("Sibilant Spectral Peak Frequency:", sibilant_spectral_peak_frequency)
+print("Linear Spectrogram shape:", linear_spec.shape)
+print("Mel Spectrogram shape:", mel_spec.shape)
+print("MFCCs shape:", mfccs.shape)

@@ -9,3 +9,5 @@ from .harmonic import *
 from .phase import *
 from .formants import *
 from .sibilance import *
+from .spectrogram import *
+from .mfcc import *
