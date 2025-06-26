@@ -1,4 +1,3 @@
-
 import torch
 import pytest
 from audiofeat.spectral.centroid import spectral_centroid
@@ -59,7 +58,7 @@ def test_spectral_skewness():
 
 def test_spectral_spread():
     audio_data = torch.randn(2048)
-    result = spectral_spread(audio_data, n_fft=2048)
+    result = spectral_spread(audio_data, n_fft=2048, sample_rate=22050)
     assert isinstance(result, torch.Tensor)
 
 def test_spectral_slope():

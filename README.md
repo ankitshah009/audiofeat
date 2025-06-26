@@ -19,7 +19,7 @@
 - **Spectral Centroid:** Represents the "center of mass" of the spectrum, indicating dominant frequencies.
 - **Spectral Rolloff:** The frequency below which a certain percentage of the total spectral energy is concentrated.
 - **Spectral Flux:** Measures the rate of change of the power spectrum.
-- **Spectral Flatness:** Quantifies how noise-like a sound is.
+- **Spectral Flatness:** Quantifies how noise-like a sound is, using a `torch`-native geometric mean.
 - **Spectral Entropy:** Measures the randomness or unpredictability of the spectrum.
 - **Spectral Skewness:** Describes the asymmetry of the spectral distribution.
 - **Spectral Spread (Bandwidth):** Measures the bandwidth of the spectrum, or how "spread out" it is around the centroid.
@@ -29,6 +29,8 @@
 - **Harmonic-to-Noise Ratio (HNR):** Ratio of energy in harmonic components to noise components.
 - **Spectral Deviation:** Quantifies the "jaggedness" of the local spectrum.
 - **Low-High Energy Ratio:** Ratio of energy below 1 kHz to that above 3 kHz.
+- **LPC (Linear Prediction Coefficients):** Coefficients representing the spectral envelope of a signal.
+- **LSP (Line Spectral Pairs):** Robust and compact representation of the LPC filter.
 - **MFCCs (Mel-Frequency Cepstral Coefficients):** Compact representation of the spectral envelope, based on the Mel scale.
 - **Linear Spectrogram (STFT):** Visual representation of the spectrum of frequencies over time.
 - **Mel Spectrogram:** Spectrogram with a Mel-scaled frequency axis, mimicking human auditory perception.
@@ -36,8 +38,8 @@
 - **Chroma Features:** Represents the intensity of the 12 different pitch classes of the Western musical scale.
 
 ### Cepstral Features
-- **LPCC (Linear Predictive Cepstral Coefficients):** Cepstral coefficients derived from Linear Predictive Coding (LPC) analysis. (Note: This is a placeholder implementation and needs a proper LPC solver).
-- **GTCC (Gammatone Cepstral Coefficients):** Cepstral coefficients derived from a Gammatone filterbank. (Note: This is a placeholder implementation and needs a proper Gammatone filterbank).
+- **LPCC (Linear Predictive Cepstral Coefficients):** Cepstral coefficients derived from Linear Predictive Coding (LPC) analysis.
+- **GTCC (Gammatone Cepstral Coefficients):** Cepstral coefficients derived from a Gammatone filterbank.
 - **Delta Coefficients:** First-order derivative of a feature contour over time.
 - **Delta-Delta Coefficients:** Second-order derivative of a feature contour over time.
 
@@ -64,10 +66,10 @@
 - **Vocal Tract Length:** Estimated from the first two formants.
 - **Alpha Ratio:** Ratio of low-frequency energy (50-1k Hz) to high-frequency energy (1-5k Hz).
 - **Hammarberg Index:** Ratio of max energy in 0-2k Hz band to max energy in 2-5k Hz band.
-- **Harmonic Differences (e.g., H1-H2, H1-A3):** Ratios between the amplitudes of specific harmonics. (Note: This is a placeholder implementation).
+- **Harmonic Differences (e.g., H1-H2, H1-A3):** Ratios between the amplitudes of specific harmonics.
 
 ### Tonal and Musical Features
-- **Tonnetz (Tonal Centroid Features):** A 6-dimensional representation of tonal space based on music theory. (Note: This is a placeholder implementation).
+- **Tonnetz (Tonal Centroid Features):** A 6-dimensional representation of tonal space based on music theory.
 
 ## Installation
 

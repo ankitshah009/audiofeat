@@ -18,3 +18,5 @@ from .hnr import *
 from .deviation import *
 from .chroma import *
 from .tonnetz import *
+from .lpc import *
+from .lsp import *
