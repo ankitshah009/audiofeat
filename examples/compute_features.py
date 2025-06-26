@@ -1,4 +1,3 @@
-
 import torch
 import audiofeat
 
@@ -35,6 +34,7 @@ _entropy_of_energy = audiofeat.entropy_of_energy(audio_data, frame_length=2048, 
 f0_autocorr = audiofeat.fundamental_frequency_autocorr(audio_data, fs=sample_rate, frame_length=2048, hop_length=512)
 f0_yin = audiofeat.fundamental_frequency_yin(audio_data, fs=sample_rate, frame_length=2048, hop_length=512)
 semitone_sd = audiofeat.semitone_sd(f0_autocorr)
+pitch_strength = audiofeat.pitch_strength(audio_data, fs=sample_rate, frame_length=2048, hop_length=512)
 
 # Voice features
 _alpha_ratio = audiofeat.alpha_ratio(audio_data, sample_rate)
@@ -109,6 +109,7 @@ print("Entropy of Energy:", _entropy_of_energy[:5])
 print("F0 Autocorrelation:", f0_autocorr[:5])
 print("F0 YIN:", f0_yin[:5])
 print("Semitone SD:", semitone_sd)
+print("Pitch Strength:", pitch_strength[:5])
 print("Harmonic Richness Factor:", harmonic_richness_factor)
 print("Inharmonicity Index:", inharmonicity_index)
 print("Phase Coherence:", phase_coherence)
@@ -126,3 +127,6 @@ print("Deltas shape:", deltas.shape)
 print("Delta-Deltas shape:", delta_deltas.shape)
 print("Chroma Features shape:", chroma_features.shape)
 print("Tonnetz Features shape:", tonnetz_features.shape)
+print("Alpha Ratio:", _alpha_ratio)
+print("Hammarberg Index:", _hammarberg_index)
+print("Harmonic Differences:", _harmonic_differences)
