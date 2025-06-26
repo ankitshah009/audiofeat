@@ -1,4 +1,3 @@
-
 import torch
 from ..temporal.rms import hann_window
 
@@ -18,7 +17,9 @@ def spectral_contrast(x: torch.Tensor, fs: int, n_fft: int = 2048, n_bands: int 
     X = torch.fft.rfft(x * hann_window(x.numel()).to(x.device), n=n_fft)
     P = X.abs() ** 2
     
-    # Divide spectrum into bands
+    # Define frequency band edges (logarithmic spacing for better perceptual relevance)
+    # This is a common approach in spectral contrast calculation
+    # Using a simplified linear spacing for now, but noting the ideal would be log.
     band_edges = torch.linspace(0, n_fft // 2, n_bands + 1, dtype=torch.long)
     
     contrast = []
@@ -36,14 +37,13 @@ def spectral_contrast(x: torch.Tensor, fs: int, n_fft: int = 2048, n_bands: int 
             contrast.append(torch.tensor(0.0, device=x.device))
             continue
 
-        # Find peaks and valleys
+        # Find peaks and valleys within the band
         peaks = torch.max(band_spectrum)
         valleys = torch.min(band_spectrum)
         
-        if valleys == 0:
-            contrast.append(torch.tensor(0.0, device=x.device))
-            continue
-
-        contrast.append(torch.log(peaks / valleys))
+        # Calculate contrast: (peak - valley) / (peak + valley)
+        # Add a small epsilon to the denominator to avoid division by zero
+        denominator = peaks + valleys + 1e-8
+        contrast.append((peaks - valleys) / denominator)
         
     return torch.tensor(contrast)

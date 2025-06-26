@@ -25,7 +25,7 @@
 - **Spectral Spread (Bandwidth):** Measures the bandwidth of the spectrum, or how "spread out" it is around the centroid.
 - **Spectral Slope:** The slope of a linear regression fitted to the spectrum.
 - **Spectral Crest Factor:** Ratio of the max spectral magnitude to the sum of magnitudes; measures "peakiness".
-- **Spectral Contrast:** Measures the amplitude difference between spectral peaks and valleys across several frequency sub-bands.
+- **Spectral Contrast:** Measures the amplitude difference between spectral peaks and valleys across several frequency sub-bands, calculated as `(peak - valley) / (peak + valley)`.
 - **Harmonic-to-Noise Ratio (HNR):** Ratio of energy in harmonic components to noise components.
 - **Spectral Deviation:** Quantifies the "jaggedness" of the local spectrum.
 - **Low-High Energy Ratio:** Ratio of energy below 1 kHz to that above 3 kHz.
