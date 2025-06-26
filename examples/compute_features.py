@@ -1,3 +1,4 @@
+
 import torch
 import audiofeat
 
@@ -88,6 +89,10 @@ tonnetz_features = audiofeat.tonnetz(chroma_features)
 # Apply functionals to a feature series (e.g., RMS)
 rms_functionals = audiofeat.compute_functionals(rms.unsqueeze(1)) # Unsqueeze to make it (time_frames, 1)
 
+# Rhythm features
+estimated_tempo = audiofeat.tempo(audio_data, sample_rate)
+beat_times = audiofeat.beat_track(audio_data, sample_rate)
+
 
 # Print the first 5 values of each feature
 print("RMS:", rms[:5])
@@ -140,3 +145,5 @@ print("Alpha Ratio:", _alpha_ratio)
 print("Hammarberg Index:", _hammarberg_index)
 print("Harmonic Differences:", _harmonic_differences)
 print("RMS Functionals:", rms_functionals)
+print("Estimated Tempo (BPM):", estimated_tempo)
+print("Beat Times (seconds):", beat_times[:5])

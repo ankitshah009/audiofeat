@@ -71,6 +71,10 @@
 ### Tonal and Musical Features
 - **Tonnetz (Tonal Centroid Features):** A 6-dimensional representation of tonal space based on music theory.
 
+### Rhythm Features
+- **Tempo:** Estimates the tempo (BPM) of an audio signal.
+- **Beat Tracking:** Performs simple beat tracking on an audio signal.
+
 ### Statistical Functionals
 - **Mean:** Average value of a feature over time.
 - **Standard Deviation:** Variability of a feature over time.

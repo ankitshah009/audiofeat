@@ -4,3 +4,4 @@ from .amplitude import *
 from .rhythm import *
 from .attack import *
 from .energy_entropy import *
+from .rhythm_features import *
