@@ -1,4 +1,3 @@
-
 import torch
 
 def frame_signal(x: torch.Tensor, frame_length: int, hop_length: int):
@@ -19,3 +18,18 @@ def rms(x: torch.Tensor, frame_length: int, hop_length: int):
     w = hann_window(frame_length).to(x.device)
     win_frames = frames * w
     return torch.sqrt(torch.mean(win_frames ** 2, dim=1))
+
+def short_time_energy(x: torch.Tensor, frame_length: int, hop_length: int):
+    """
+    Computes the short-time energy of an audio signal.
+
+    Args:
+        x (torch.Tensor): The audio signal.
+        frame_length (int): The length of each frame in samples.
+        hop_length (int): The number of samples to slide the window.
+
+    Returns:
+        torch.Tensor: The short-time energy for each frame.
+    """
+    frames = frame_signal(x, frame_length, hop_length)
+    return torch.sum(frames ** 2, dim=1)

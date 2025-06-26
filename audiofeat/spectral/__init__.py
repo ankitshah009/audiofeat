@@ -3,7 +3,7 @@ from .rolloff import *
 from .flux import *
 from .flatness import *
 from .entropy import *
-from .skewness import *
+from .moments import *
 from .energy_ratio import *
 from .harmonic import *
 from .phase import *
@@ -11,3 +11,10 @@ from .formants import *
 from .sibilance import *
 from .spectrogram import *
 from .mfcc import *
+from .slope import *
+from .crest import *
+from .contrast import *
+from .hnr import *
+from .deviation import *
+from .chroma import *
+from .tonnetz import *

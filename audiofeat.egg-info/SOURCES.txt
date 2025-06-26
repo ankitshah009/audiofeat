@@ -19,6 +19,7 @@ audiofeat/spectral/flatness.py
 audiofeat/spectral/flux.py
 audiofeat/spectral/formants.py
 audiofeat/spectral/harmonic.py
+audiofeat/spectral/mfcc.py
 audiofeat/spectral/phase.py
 audiofeat/spectral/rolloff.py
 audiofeat/spectral/sibilance.py
@@ -37,3 +38,9 @@ audiofeat/voice/nasality.py
 audiofeat/voice/onset.py
 audiofeat/voice/quality.py
 audiofeat/voice/vocal_tract.py
+tests/test_pitch.py
+tests/test_spectral.py
+tests/test_temporal.py
+tests/test_temporal_amplitude.py
+tests/test_temporal_rhythm.py
+tests/test_voice.py

@@ -5,3 +5,6 @@ from .excitation import *
 from .flow import *
 from .nasality import *
 from .vocal_tract import *
+from .alpha_ratio import *
+from .hammarberg import *
+from .harmonic_diff import *

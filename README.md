@@ -6,10 +6,14 @@
 
 ### Temporal Features
 - **RMS (Root Mean Square):** Measures the loudness or power of an audio signal.
+- **Short-Time Energy (STE):** The sum of squared signal values in a frame.
 - **Zero-Crossing Rate (ZCR):** Indicates the rate at which the signal changes its sign.
 - **Amplitude Modulation Depth:** Measures the depth of amplitude modulation over a sliding window.
 - **Breath Group Duration:** Estimates the duration of breath groups from the audio envelope.
 - **Speech Rate:** Estimates speech rate in syllables per second.
+- **Log Attack Time:** Measures the time for a signal's envelope to rise to its peak.
+- **Temporal Centroid:** The "center of gravity" of the signal's amplitude envelope.
+- **Entropy of Energy:** Measures abrupt changes in energy within a frame.
 
 ### Spectral Features
 - **Spectral Centroid:** Represents the "center of mass" of the spectrum, indicating dominant frequencies.
@@ -18,17 +22,23 @@
 - **Spectral Flatness:** Quantifies how noise-like a sound is.
 - **Spectral Entropy:** Measures the randomness or unpredictability of the spectrum.
 - **Spectral Skewness:** Describes the asymmetry of the spectral distribution.
+- **Spectral Spread (Bandwidth):** Measures the bandwidth of the spectrum, or how "spread out" it is around the centroid.
+- **Spectral Slope:** The slope of a linear regression fitted to the spectrum.
+- **Spectral Crest Factor:** Ratio of the max spectral magnitude to the sum of magnitudes; measures "peakiness".
+- **Spectral Contrast:** Measures the amplitude difference between spectral peaks and valleys across several frequency sub-bands.
+- **Harmonic-to-Noise Ratio (HNR):** Ratio of energy in harmonic components to noise components.
+- **Spectral Deviation:** Quantifies the "jaggedness" of the local spectrum.
 - **Low-High Energy Ratio:** Ratio of energy below 1 kHz to that above 3 kHz.
-- **Harmonic Richness Factor:** Measures the richness of harmonics in a sound.
-- **Inharmonicity Index:** Quantifies the deviation of a sound's partials from a perfect harmonic series.
-- **Phase Coherence:** Measures the consistency of phase relationships across different frequencies.
-- **Formant Frequencies:** Estimates the resonant frequencies of the vocal tract.
-- **Formant Bandwidths:** Estimates the bandwidths of the formants.
-- **Formant Dispersion:** Average spacing between the first five formants.
-- **Sibilant Spectral Peak Frequency:** Peak frequency of sibilant energy between 3 and 12 kHz.
 - **MFCCs (Mel-Frequency Cepstral Coefficients):** Compact representation of the spectral envelope, based on the Mel scale.
 - **Linear Spectrogram (STFT):** Visual representation of the spectrum of frequencies over time.
 - **Mel Spectrogram:** Spectrogram with a Mel-scaled frequency axis, mimicking human auditory perception.
+- **CQT Spectrogram (Constant-Q Transform):** Spectrogram with logarithmically spaced frequency bins. (Note: This is a simplified `torch`-native implementation and not a full, optimized CQT).
+
+### Cepstral Features
+- **LPCC (Linear Predictive Cepstral Coefficients):** Cepstral coefficients derived from Linear Predictive Coding (LPC) analysis. (Note: This is a placeholder implementation and needs a proper LPC solver).
+- **GTCC (Gammatone Cepstral Coefficients):** Cepstral coefficients derived from a Gammatone filterbank. (Note: This is a placeholder implementation and needs a proper Gammatone filterbank).
+- **Delta Coefficients:** First-order derivative of a feature contour over time.
+- **Delta-Delta Coefficients:** Second-order derivative of a feature contour over time.
 
 ### Pitch Features
 - **Fundamental Frequency (F0) Autocorrelation:** Estimates F0 via autocorrelation.
@@ -50,6 +60,13 @@
 - **Maximum Flow Declination Rate (MFDR):** Approximate MFDR from differentiated glottal flow.
 - **Nasality Index:** Computed from nasal and oral microphone signals.
 - **Vocal Tract Length:** Estimated from the first two formants.
+- **Alpha Ratio:** Ratio of low-frequency energy (50-1k Hz) to high-frequency energy (1-5k Hz).
+- **Hammarberg Index:** Ratio of max energy in 0-2k Hz band to max energy in 2-5k Hz band.
+- **Harmonic Differences (e.g., H1-H2, H1-A3):** Ratios between the amplitudes of specific harmonics. (Note: This is a placeholder implementation).
+
+### Tonal and Musical Features
+- **Chroma Features:** A 12-element feature vector representing the total energy within each of the 12 pitch classes. (Note: This is a placeholder implementation).
+- **Tonnetz (Tonal Centroid Features):** A 6-dimensional representation of tonal space based on music theory. (Note: This is a placeholder implementation).
 
 ## Installation
 

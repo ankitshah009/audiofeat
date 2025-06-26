@@ -1,3 +1,4 @@
+
 import torch
 import pytest
 from audiofeat.voice.quality import jitter, shimmer, subharmonic_to_harmonic_ratio, normalized_amplitude_quotient, closed_quotient, glottal_closure_time, soft_phonation_index, speed_quotient, vocal_fry_index
@@ -7,6 +8,9 @@ from audiofeat.voice.excitation import glottal_to_noise_excitation
 from audiofeat.voice.flow import maximum_flow_declination_rate
 from audiofeat.voice.nasality import nasality_index
 from audiofeat.voice.vocal_tract import vocal_tract_length
+from audiofeat.voice.alpha_ratio import alpha_ratio
+from audiofeat.voice.hammarberg import hammarberg_index
+from audiofeat.voice.harmonic_diff import harmonic_differences
 
 def test_jitter():
     periods = torch.randn(10).abs() + 0.01
@@ -92,3 +96,18 @@ def test_vocal_tract_length():
     F2 = 1500.0
     result = vocal_tract_length(F1, F2)
     assert isinstance(result, float)
+
+def test_alpha_ratio():
+    audio_data = torch.randn(22050)
+    result = alpha_ratio(audio_data, fs=22050)
+    assert isinstance(result, torch.Tensor)
+
+def test_hammarberg_index():
+    audio_data = torch.randn(22050)
+    result = hammarberg_index(audio_data, fs=22050)
+    assert isinstance(result, torch.Tensor)
+
+def test_harmonic_differences():
+    magnitudes = torch.randn(1025)
+    result = harmonic_differences(magnitudes, f0_hz=100.0, fs=22050)
+    assert isinstance(result, torch.Tensor)
