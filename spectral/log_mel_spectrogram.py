@@ -1,62 +1,57 @@
-import numpy as np
+import torch
+import torchaudio
+import torchaudio.transforms as T
 
-def log_mel_spectrogram(y, sr, n_fft=2048, hop_length=512, n_mels=128, fmin=0.0, fmax=None):
+def log_mel_spectrogram(waveform: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_length: int = 512, n_mels: int = 128, f_min: float = 0.0, f_max: float = None) -> torch.Tensor:
     """
-    Computes the log-Mel spectrogram of an an audio time series.
-
-    This is a basic implementation. For a full-featured and optimized
-    log-Mel spectrogram, it is highly recommended to use a dedicated
-    audio processing library like `librosa`.
+    Computes the log-Mel spectrogram of an audio waveform using torchaudio.
 
     Parameters
     ----------
-    y : np.ndarray
-        Audio time series.
-    sr : int
-        Sampling rate of `y`.
+    waveform : torch.Tensor
+        Mono audio waveform tensor. Expected shape: (num_samples,) or (1, num_samples).
+    sample_rate : int
+        Sampling rate of the waveform.
     n_fft : int
         Length of the FFT window.
     hop_length : int
         Number of samples between successive frames.
     n_mels : int
         Number of Mel bands to generate.
-    fmin : float
+    f_min : float
         Minimum frequency (Hz) for the Mel filterbank.
-    fmax : float or None
-        Maximum frequency (Hz) for the Mel filterbank. If None, defaults to sr / 2.
+    f_max : float or None
+        Maximum frequency (Hz) for the Mel filterbank. If None, defaults to sample_rate / 2.
 
     Returns
     -------
-    np.ndarray
+    torch.Tensor
         Log-Mel spectrogram.
     """
-    if fmax is None:
-        fmax = sr / 2
+    if waveform.ndim > 1 and waveform.shape[0] > 1:
+        # Assuming mono or taking the first channel if multi-channel
+        waveform = waveform[0]
+    elif waveform.ndim == 0:
+        raise ValueError("Input waveform cannot be a scalar.")
 
-    # 1. Compute the Short-Time Fourier Transform (STFT)
-    # This is a simplified STFT. A proper STFT would involve windowing.
-    # For a more complete STFT, consider scipy.signal.stft or librosa.stft.
-    stft_matrix = np.abs(
-        np.array([
-            np.fft.fft(y[i:i + n_fft])[:n_fft // 2 + 1]
-            for i in range(0, len(y) - n_fft + 1, hop_length)
-        ])
-    ).T
+    if f_max is None:
+        f_max = float(sample_rate / 2)
 
-    # 2. Apply the Mel filterbank to the power spectrogram
-    # This part requires a Mel filterbank.
-    # Example (conceptual, requires librosa or similar to generate mel_basis):
-    # import librosa
-    # mel_basis = librosa.filters.mel(sr=sr, n_fft=n_fft, n_mels=n_mels, fmin=fmin, fmax=fmax)
-    # mel_spectrogram = np.dot(mel_basis, stft_matrix**2)
+    # Create a MelSpectrogram transform
+    mel_spectrogram_transform = T.MelSpectrogram(
+        sample_rate=sample_rate,
+        n_fft=n_fft,
+        hop_length=hop_length,
+        n_mels=n_mels,
+        f_min=f_min,
+        f_max=f_max,
+        power=2.0,  # Power spectrogram
+    )
 
-    # Placeholder for Mel spectrogram calculation
-    # In a real scenario, you would apply a Mel filterbank here.
-    # For demonstration, we'll just use the power spectrogram.
-    # You would replace this with the actual mel_spectrogram calculation.
-    mel_spectrogram = stft_matrix**2 # This is NOT a true Mel spectrogram
+    # Compute the Mel spectrogram
+    mel_spectrogram = mel_spectrogram_transform(waveform)
 
-    # 3. Convert to log scale
-    log_mel_s = np.log(mel_spectrogram + 1e-6) # Add a small epsilon to avoid log(0)
+    # Convert to log scale
+    log_mel_s = torch.log(mel_spectrogram + 1e-6) # Add a small epsilon to avoid log(0)
 
     return log_mel_s
