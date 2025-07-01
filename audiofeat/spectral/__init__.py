@@ -20,3 +20,5 @@ from .chroma import *
 from .tonnetz import *
 from .lpc import *
 from .lsp import *
+from .cqt import *
+from .gfcc import *

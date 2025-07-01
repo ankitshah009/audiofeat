@@ -5,3 +5,4 @@ from .rhythm import *
 from .attack import *
 from .energy_entropy import *
 from .rhythm_features import *
+from .loudness import *

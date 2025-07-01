@@ -8,3 +8,5 @@ from .vocal_tract import *
 from .alpha_ratio import *
 from .hammarberg import *
 from .harmonic_diff import *
+from .jitter import *
+from .shimmer import *
