@@ -1,0 +1,1 @@
+from .beat import beat_detection

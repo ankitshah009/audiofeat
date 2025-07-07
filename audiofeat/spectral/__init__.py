@@ -22,3 +22,7 @@ from .lpc import *
 from .lsp import *
 from .cqt import *
 from .gfcc import *
+from .irregularity import *
+from .roughness import *
+from .sharpness import *
+from .tonality import *

@@ -6,3 +6,5 @@ from .attack import *
 from .energy_entropy import *
 from .rhythm_features import *
 from .loudness import *
+from .teager import *
+from .decay import *
