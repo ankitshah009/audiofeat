@@ -14,6 +14,7 @@
 - **Log Attack Time:** Measures the time for a signal's envelope to rise to its peak.
 - **Temporal Centroid:** The "center of gravity" of the signal's amplitude envelope.
 - **Entropy of Energy:** Measures abrupt changes in energy within a frame.
+- **Decay Time:** Measures the time for a signal's envelope to decay from its peak.
 
 ### Spectral Features
 - **Spectral Centroid:** Represents the "center of mass" of the spectrum, indicating dominant frequencies.
@@ -36,6 +37,8 @@
 - **Mel Spectrogram:** Spectrogram with a Mel-scaled frequency axis, mimicking human auditory perception.
 - **CQT Spectrogram (Constant-Q Transform):** Spectrogram with logarithmically spaced frequency bins. (Note: This is a simplified `torch`-native implementation and not a full, optimized CQT).
 - **Chroma Features:** Represents the intensity of the 12 different pitch classes of the Western musical scale.
+- **Spectral Sharpness (Zwicker Model):** Measures the perceived sharpness of a sound based on the Zwicker model.
+- **Spectral Tonality:** Quantifies the tonal characteristics of a sound using the spectral crest factor.
 
 ### Cepstral Features
 - **LPCC (Linear Predictive Cepstral Coefficients):** Cepstral coefficients derived from Linear Predictive Coding (LPC) analysis.
