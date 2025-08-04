@@ -53,6 +53,15 @@
 - **Pitch Strength:** Measures the strength of periodicity in a signal.
 
 ### Voice Features
+
+### Advanced ML Wrappers (install with `pip install audiofeat[models]`)
+- **Speaker Diarization** — `audiofeat.diarization.diarize()` for *who-spoke-when* using pyannote-audio.
+- **Speaker Embeddings (ECAPA)** — `audiofeat.embeddings.extract_speaker_embedding()` for voice similarity.
+- **ASR (Whisper)** — `audiofeat.asr.transcribe()` to convert speech to text.
+- **Environmental Sound Classification** — `audiofeat.scene.classify_scene()` returns AudioSet tags.
+- **VAD (Silero)** — `audiofeat.vad.is_speech()` for robust voice activity detection.
+- **Noise Suppression (RNNoise)** — `audiofeat.denoise.denoise_rnn()` for real-time cleanup.
+- **SSL Embeddings (Wav2Vec2 / HuBERT / AST)** — `audiofeat.ssl.embed()` to get 768-D contextual features.
 - **Jitter:** Cycle-to-cycle F0 variation.
 - **Shimmer:** Cycle-to-cycle amplitude variation.
 - **Subharmonic to Harmonic Ratio:** Ratio of subharmonic power to harmonic power.

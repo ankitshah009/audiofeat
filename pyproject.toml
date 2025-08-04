@@ -64,6 +64,18 @@ Documentation = "https://github.com/ankitshah009/audiofeat#readme"
 "Bug Reports" = "https://github.com/ankitshah009/audiofeat/issues"
 
 [project.optional-dependencies]
+models = [
+    "pyannote.audio>=3.1.1",
+    "speechbrain>=1.0.0",
+    "openai-whisper>=202311",
+    "torchaudio>=2.1.0",
+    "huggingface-hub>=0.21.0",
+    "silero-vad==0.4.0",
+    "asteroid>=0.5.0",
+    "panns_inference>=0.1.0",
+    "madmom>=0.16.1",
+]
+
 dev = [
     "pytest>=6.0",
     "pytest-cov",
