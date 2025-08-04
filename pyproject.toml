@@ -1,0 +1,110 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "audiofeat"
+version = "1.0.0"
+authors = [
+    {name = "Ankit Shah", email = "ankit.tronix@gmail.com"},
+]
+description = "A comprehensive PyTorch-based audio feature extraction library for machine learning, research, and audio analysis"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+keywords = [
+    "audio",
+    "feature-extraction", 
+    "signal-processing",
+    "pytorch",
+    "machine-learning",
+    "speech",
+    "voice",
+    "spectrogram",
+    "mfcc",
+    "spectral-features",
+    "temporal-features",
+    "pitch-detection",
+    "audio-analysis",
+    "music-information-retrieval",
+    "mir",
+    "dsp",
+    "audio-processing"
+]
+dependencies = [
+    "numpy>=1.20.0",
+    "scipy>=1.7.0",
+    "torch>=1.9.0",
+    "torchaudio>=0.9.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/ankitshah009/audiofeat"
+Repository = "https://github.com/ankitshah009/audiofeat"
+Documentation = "https://github.com/ankitshah009/audiofeat#readme"
+"Bug Reports" = "https://github.com/ankitshah009/audiofeat/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "pytest-cov",
+    "black",
+    "isort",
+    "flake8",
+    "mypy",
+]
+examples = [
+    "matplotlib",
+    "librosa",
+    "soundfile",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["audiofeat*"]
+exclude = ["tests*", "examples*"]
+
+[tool.setuptools.package-data]
+audiofeat = ["py.typed"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88

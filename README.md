@@ -88,12 +88,32 @@
 
 ## Installation
 
-To install `audiofeat`, clone the repository and install it in editable mode:
+### Install from PyPI (Recommended)
+
+```bash
+pip install audiofeat
+```
+
+### Install from Source
+
+To install `audiofeat` from source, clone the repository and install it in editable mode:
 
 ```bash
 git clone https://github.com/ankitshah009/audiofeat.git
 cd audiofeat
 pip install -e .
+```
+
+### Optional Dependencies
+
+For development and examples:
+
+```bash
+# For development
+pip install audiofeat[dev]
+
+# For running examples
+pip install audiofeat[examples]
 ```
 
 ## Usage

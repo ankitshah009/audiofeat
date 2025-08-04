@@ -1,0 +1,27 @@
+# Include important documentation and configuration files
+include README.md
+include LICENSE.md
+include CRUSH.md
+include pyproject.toml
+include setup.py
+
+# Include package data
+recursive-include audiofeat *.py
+recursive-include audiofeat *.pyi
+
+# Include examples and tests
+recursive-include examples *.py
+recursive-include tests *.py
+
+# Exclude unnecessary files
+exclude .DS_Store
+exclude .gitignore
+global-exclude __pycache__
+global-exclude *.py[co]
+global-exclude .pytest_cache
+prune .git
+prune .github
+prune build
+prune dist
+prune *.egg-info
+prune .crush
