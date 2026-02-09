@@ -3,7 +3,7 @@ from ..temporal.rms import hann_window
 
 
 def spectral_irregularity(x: torch.Tensor, n_fft: int = 2048) -> torch.Tensor:
-    """Compute Jensen's *spectral irregularity* of a signal.
+    r"""Compute Jensen's *spectral irregularity* of a signal.
 
     The irregularity index reflects how smoothly the magnitudes of
     successive partials vary across the spectrum.  Low values indicate

@@ -54,6 +54,17 @@ setup(
         "torchaudio>=0.9.0",
     ],
     extras_require={
+        "models": [
+            "pyannote.audio>=3.1.1",
+            "speechbrain>=1.0.0",
+            "openai-whisper>=202311",
+            "torchaudio>=2.1.0",
+            "huggingface-hub>=0.21.0",
+            "silero-vad==0.4.0",
+            "asteroid>=0.5.0",
+            "panns_inference>=0.1.0",
+            "madmom>=0.16.1",
+        ],
         "dev": [
             "pytest>=6.0",
             "pytest-cov",
@@ -67,6 +78,24 @@ setup(
             "librosa", 
             "soundfile",
         ],
+        "validation": [
+            "praat-parselmouth>=0.4.3",
+        ],
+        "standards": [
+            "opensmile>=2.5.0",
+        ],
+        "full": [
+            "matplotlib",
+            "librosa",
+            "soundfile",
+            "praat-parselmouth>=0.4.3",
+            "opensmile>=2.5.0",
+        ],
+    },
+    entry_points={
+        "console_scripts": [
+            "audiofeat=audiofeat.cli:main",
+        ]
     },
     include_package_data=True,
     zip_safe=False,

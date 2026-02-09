@@ -1,5 +1,6 @@
 import torch
 import pytest
+from scipy.signal import iirpeak, lfilter
 from audiofeat.spectral.centroid import spectral_centroid
 from audiofeat.spectral.rolloff import spectral_rolloff
 from audiofeat.spectral.flux import spectral_flux
@@ -176,3 +177,88 @@ def test_tonnetz():
     assert isinstance(result, torch.Tensor)
     assert result.shape[0] == 6
     assert result.shape[1] > 0
+
+
+def test_formant_frequencies_speech_like_signal():
+    sr = 16000
+    duration = 1.0
+    t = torch.arange(int(sr * duration), dtype=torch.float32) / sr
+    # Harmonic-rich glottal-like source
+    source = torch.zeros_like(t)
+    f0 = 120.0
+    for k in range(1, 15):
+        source += torch.sin(2 * torch.pi * (k * f0) * t) / k
+    source_np = source.numpy()
+
+    # Shape with two broad resonances near F1/F2.
+    for center_hz, q in [(500.0, 3.0), (1500.0, 4.0)]:
+        b, a = iirpeak(center_hz / (sr / 2), q)
+        source_np = lfilter(b, a, source_np)
+
+    x = torch.from_numpy(source_np.astype("float32"))
+    estimated = formant_frequencies(
+        x,
+        fs=sr,
+        order=12,
+        num_formants=3,
+        max_formant=5000.0,
+    )
+    assert estimated.shape[0] >= 2
+    assert torch.isfinite(estimated[0])
+    assert torch.isfinite(estimated[1])
+    assert 150.0 <= float(estimated[0].item()) <= 2000.0
+    assert float(estimated[1].item()) > float(estimated[0].item())
+
+
+def test_spectral_centroid_respects_sample_rate():
+    sr = 16000
+    freq_hz = 1000.0
+    t = torch.arange(sr * 2, dtype=torch.float32) / sr
+    x = torch.sin(2 * torch.pi * freq_hz * t)
+
+    centroid_correct_sr = spectral_centroid(
+        x,
+        frame_length=1024,
+        hop_length=256,
+        sample_rate=sr,
+    ).median()
+    centroid_wrong_sr = spectral_centroid(
+        x,
+        frame_length=1024,
+        hop_length=256,
+        sample_rate=22050,
+    ).median()
+
+    assert abs(float(centroid_correct_sr.item()) - freq_hz) < 60.0
+    assert abs(float(centroid_wrong_sr.item()) - float(centroid_correct_sr.item())) > 120.0
+
+
+def test_spectral_rolloff_respects_sample_rate_and_validates_percent():
+    sr = 16000
+    freq_hz = 1200.0
+    t = torch.arange(sr * 2, dtype=torch.float32) / sr
+    x = torch.sin(2 * torch.pi * freq_hz * t)
+
+    rolloff_correct_sr = spectral_rolloff(
+        x,
+        frame_length=1024,
+        hop_length=256,
+        sample_rate=sr,
+    ).median()
+    rolloff_wrong_sr = spectral_rolloff(
+        x,
+        frame_length=1024,
+        hop_length=256,
+        sample_rate=22050,
+    ).median()
+
+    correct_val = float(rolloff_correct_sr.item())
+    wrong_val = float(rolloff_wrong_sr.item())
+    assert correct_val > 0.0
+    assert wrong_val > correct_val
+    scale_ratio = wrong_val / correct_val
+    expected_ratio = 22050.0 / sr
+    assert abs(scale_ratio - expected_ratio) < 0.05
+
+    with pytest.raises(ValueError):
+        spectral_rolloff(x, rolloff_percent=0.0, sample_rate=sr)

@@ -7,6 +7,7 @@ from audiofeat.temporal.attack import log_attack_time
 from audiofeat.temporal.rhythm import temporal_centroid
 from audiofeat.temporal.energy_entropy import entropy_of_energy
 from audiofeat.temporal.rhythm_features import tempo, beat_track
+from audiofeat.temporal.rms import frame_signal
 
 def test_rms():
     audio_data = torch.randn(22050 * 5) # 5 seconds of audio
@@ -64,3 +65,11 @@ def test_beat_track():
     result = beat_track(audio_data, sample_rate=22050)
     assert isinstance(result, torch.Tensor)
     assert result.dim() == 1 # Should be a 1D tensor of beat times
+
+
+def test_frame_signal_short_clip_is_zero_padded():
+    audio_data = torch.arange(0, 100, dtype=torch.float32)
+    frames = frame_signal(audio_data, frame_length=256, hop_length=128)
+    assert frames.shape == (1, 256)
+    assert torch.allclose(frames[0, :100], audio_data)
+    assert torch.allclose(frames[0, 100:], torch.zeros(156))

@@ -9,7 +9,7 @@ def spectral_tonality(
     n_fft: int = 2048,
     top_db: float = 60.0,
 ) -> torch.Tensor:
-    """Compute a simple *tonality coefficient* (0..1).
+    r"""Compute a simple *tonality coefficient* (0..1).
 
     The ECMA-418-2 standard defines a sophisticated critical-band based
     metric; here we approximate it with a *spectral crest factor* (also

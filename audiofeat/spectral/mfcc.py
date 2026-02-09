@@ -17,6 +17,24 @@ def mfcc(audio_data: torch.Tensor, sample_rate: int, n_mfcc: int = 40, n_fft: in
     Returns:
         torch.Tensor: The MFCCs.
     """
-    mel_spectrogram_transform = T.MelSpectrogram(sample_rate=sample_rate, n_fft=n_fft, hop_length=hop_length, n_mels=n_mels)
-    mfcc_transform = T.MFCC(sample_rate=sample_rate, n_mfcc=n_mfcc)
-    return mfcc_transform(mel_spectrogram_transform(audio_data))
+    audio_data = audio_data.flatten().float()
+    if audio_data.numel() == 0:
+        raise ValueError("audio_data must be non-empty.")
+
+    # Keep MFCC extraction stable for short clips.
+    effective_n_fft = int(min(n_fft, max(16, audio_data.numel())))
+    effective_hop = int(min(hop_length, max(1, effective_n_fft // 2)))
+    effective_n_mels = int(min(n_mels, max(8, effective_n_fft // 2)))
+    effective_n_mfcc = int(min(n_mfcc, effective_n_mels))
+
+    mfcc_transform = T.MFCC(
+        sample_rate=sample_rate,
+        n_mfcc=effective_n_mfcc,
+        melkwargs={
+            "n_fft": effective_n_fft,
+            "hop_length": effective_hop,
+            "n_mels": effective_n_mels,
+            "center": False,
+        },
+    )
+    return mfcc_transform(audio_data)

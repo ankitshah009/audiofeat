@@ -20,10 +20,25 @@ class EmotionDetector(nn.Module):
 
 def detect_emotion(waveform: torch.Tensor, sample_rate: int) -> str:
     # Extract features (e.g., MFCC)
-    mfcc_features = mfcc(waveform, sample_rate)  # Reuse existing function
+    mfcc_features = mfcc(waveform, sample_rate)  # shape: (n_mfcc, n_frames)
+    if mfcc_features.ndim == 2:
+        mfcc_features = mfcc_features.mean(dim=1)
+    elif mfcc_features.ndim != 1:
+        mfcc_features = mfcc_features.reshape(-1)
+
+    if mfcc_features.numel() != 40:
+        if mfcc_features.numel() > 40:
+            mfcc_features = mfcc_features[:40]
+        else:
+            mfcc_features = torch.nn.functional.pad(
+                mfcc_features,
+                (0, 40 - mfcc_features.numel()),
+            )
+
+    mfcc_features = mfcc_features.unsqueeze(0)
     model = EmotionDetector()  # In practice, load pre-trained weights
     with torch.no_grad():
         output = model(mfcc_features)
-        _, predicted = torch.max(output, 1)
+        predicted = torch.argmax(output, dim=1)
         emotions = ['neutral', 'happy', 'sad', 'angry', 'fear', 'disgust', 'surprise']
         return emotions[predicted.item()]  # Return the predicted emotion

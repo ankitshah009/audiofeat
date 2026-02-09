@@ -1,6 +1,7 @@
 import torch
 import torchaudio
 import torchaudio.transforms as T
+import torch.nn.functional as F
 
 def beat_track(waveform: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_length: int = 512,
                tempo_min: float = 60.0, tempo_max: float = 240.0) -> tuple[torch.Tensor, torch.Tensor]:
@@ -63,10 +64,10 @@ def beat_track(waveform: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_
     # Compute autocorrelation of the ODF to find periodicity (tempo)
     # This is a simplified autocorrelation. For better results, consider
     # using a dedicated autocorrelation function or onset auto-correlation.
-    autocorr = torch.nn.functional.conv1d(
+    autocorr = F.conv1d(
         spectral_flux.unsqueeze(0).unsqueeze(0),
         spectral_flux.flip(dims=[0]).unsqueeze(0).unsqueeze(0),
-        padding='full'
+        padding=max(0, spectral_flux.numel() - 1),
     ).squeeze()
 
     # Find peaks in the autocorrelation function within the tempo range

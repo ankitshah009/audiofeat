@@ -1,8 +1,14 @@
-
 import torch
 from ..temporal.rms import frame_signal
 
-def spectral_rolloff(audio_data: torch.Tensor, frame_length=2048, hop_length=512, rolloff_percent: float = 0.85):
+
+def spectral_rolloff(
+    audio_data: torch.Tensor,
+    frame_length: int = 2048,
+    hop_length: int = 512,
+    rolloff_percent: float = 0.85,
+    sample_rate: int = 22050,
+):
     """
     Computes the spectral rolloff of an audio signal.
 
@@ -15,6 +21,11 @@ def spectral_rolloff(audio_data: torch.Tensor, frame_length=2048, hop_length=512
     Returns:
         torch.Tensor: The spectral rolloff for each frame.
     """
+    if sample_rate <= 0:
+        raise ValueError("sample_rate must be > 0.")
+    if not 0.0 < rolloff_percent <= 1.0:
+        raise ValueError("rolloff_percent must satisfy 0 < rolloff_percent <= 1.")
+
     frames = frame_signal(audio_data, frame_length, hop_length)
     magnitude_spectrum = torch.abs(torch.fft.rfft(frames))
     total_energy = torch.sum(magnitude_spectrum, dim=1)
@@ -33,6 +44,6 @@ def spectral_rolloff(audio_data: torch.Tensor, frame_length=2048, hop_length=512
     rolloff_index = torch.clamp(rolloff_index, 0, num_bins - 1)
 
     # Convert bin index to frequency
-    frequencies = torch.fft.rfftfreq(frame_length, d=1.0/22050) # d is sample spacing, 1/fs
+    frequencies = torch.fft.rfftfreq(frame_length, d=1.0 / sample_rate)
     
-    return frequencies[rolloff_index].squeeze(1)
+    return frequencies.to(rolloff_index.device)[rolloff_index].squeeze(1)

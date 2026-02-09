@@ -7,6 +7,9 @@ try:
     from madmom.features.downbeats import RNNDownBeatProcessor, DBNDownBeatTrackingProcessor
 except ModuleNotFoundError:
     RNNBeatProcessor = None  # type: ignore
+    DBNBeatTrackingProcessor = None  # type: ignore
+    RNNDownBeatProcessor = None  # type: ignore
+    DBNDownBeatTrackingProcessor = None  # type: ignore
 
 
 def beat_track(path: str) -> List[float]:

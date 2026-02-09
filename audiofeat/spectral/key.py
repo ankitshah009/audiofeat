@@ -61,10 +61,11 @@ def key_detect(waveform: torch.Tensor, sample_rate: int, n_fft: int = 4096, hop_
     f_min = 27.5 # A0
     for i in range(magnitudes.shape[0]):
         freq = freqs[i]
-        if freq > 0:
-            semitone = 12 * torch.log2(freq / f_min)
-            chroma_idx = int(semitone.round()) % n_chroma
-            chroma_bins[chroma_idx, :] += magnitudes[i, :]
+        if freq <= 0:
+            continue
+        semitone = 12 * torch.log2(freq / f_min)
+        chroma_idx = int(semitone.round()) % n_chroma
+        chroma_bins[chroma_idx, :] += magnitudes[i, :]
     chroma_bins = torch.nn.functional.normalize(chroma_bins, p=2, dim=0)
 
     # Average chroma over time to get a single chroma vector

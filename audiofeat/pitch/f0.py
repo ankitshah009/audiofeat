@@ -1,16 +1,33 @@
 
 import torch
-import numpy as np
+
 from ..temporal.rms import frame_signal, hann_window
 
-def fundamental_frequency_autocorr(x: torch.Tensor, fs: int, frame_length: int, hop_length: int, fmin=50, fmax=600):
+
+def fundamental_frequency_autocorr(
+    x: torch.Tensor,
+    fs: int,
+    frame_length: int,
+    hop_length: int,
+    fmin: int = 50,
+    fmax: int = 600,
+):
     """Estimate F0 via autocorrelation per frame."""
+    if fmin <= 0 or fmax <= fmin:
+        raise ValueError("Expected 0 < fmin < fmax.")
+
+    x = x.flatten().float()
     frames = frame_signal(x, frame_length, hop_length)
     w = hann_window(frame_length).to(x.device)
     win = frames * w
-    autocorr = torch.fft.irfft(torch.fft.rfft(win, n=2*frame_length), n=2*frame_length)
+    spec = torch.fft.rfft(win, n=2 * frame_length)
+    autocorr = torch.fft.irfft(spec * torch.conj(spec), n=2 * frame_length)
+    autocorr = autocorr[:, :frame_length]
     min_lag = int(fs / fmax)
     max_lag = int(fs / fmin)
+    if max_lag <= min_lag:
+        raise ValueError("Invalid lag range. Check fmin/fmax and sample rate.")
+
     ac_segment = autocorr[:, min_lag:max_lag]
     lag = ac_segment.argmax(dim=1) + min_lag
     return fs / lag.float()
@@ -25,6 +42,10 @@ def fundamental_frequency_yin(
     threshold: float = 0.1,
 ):
     """Estimate F0 per frame using the YIN algorithm."""
+    if fmin <= 0 or fmax <= fmin:
+        raise ValueError("Expected 0 < fmin < fmax.")
+
+    x = x.flatten().float()
     frames = frame_signal(x, frame_length, hop_length)
     w = hann_window(frame_length).to(x.device)
     win = frames * w
@@ -46,6 +67,9 @@ def fundamental_frequency_yin(
 
     min_lag = int(fs / fmax)
     max_lag = int(fs / fmin)
+    if max_lag <= min_lag:
+        raise ValueError("Invalid lag range. Check fmin/fmax and sample rate.")
+
     segment = cmnd[:, min_lag:max_lag]
     minima, min_idx = segment.min(dim=1)
     below = segment < threshold

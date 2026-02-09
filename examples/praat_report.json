@@ -1,0 +1,77 @@
+{
+  "settings": {
+    "sample_rate": 22050,
+    "frame_length": 882,
+    "hop_length": 220,
+    "speaker_profile": "neutral",
+    "pitch_floor": 75.0,
+    "pitch_ceiling": 300.0,
+    "pitch_method": "pyin",
+    "yin_threshold": 0.1,
+    "formant_order": 12,
+    "num_formants": 5,
+    "max_formant": 5500.0,
+    "formant_method": "praat",
+    "formant_window_length_sec": 0.025,
+    "formant_time_step_sec": 0.01,
+    "pre_emphasis_from_hz": 50.0
+  },
+  "praat": {
+    "pitch": {
+      "mean_hz": 119.99999915719198,
+      "median_hz": 120.00000497396674
+    },
+    "formants": {
+      "f1_median_hz": 663.4826645994482,
+      "f2_median_hz": 1274.6572672870245,
+      "f3_median_hz": 1612.6388647122246,
+      "f4_median_hz": 2004.543400012012,
+      "f5_median_hz": 2267.956465328391
+    }
+  },
+  "audiofeat": {
+    "pitch": {
+      "mean_hz": 119.7576904296875,
+      "median_hz": 119.74475860595703,
+      "voiced_ratio": 1.0
+    },
+    "formants": {
+      "f1_median_hz": 656.7688202389785,
+      "f2_median_hz": 1269.7265399119894,
+      "f3_median_hz": 1612.5094235139964,
+      "f4_median_hz": 2004.145237125609,
+      "f5_median_hz": 2268.515127342277
+    }
+  },
+  "relative_error": {
+    "pitch_mean": 0.0020192394100525873,
+    "pitch_median": 0.0021270529785818075,
+    "formant_f1": 0.010119095371576762,
+    "formant_f2": 0.0038682769883151545
+  },
+  "tolerance_check": {
+    "passed": true,
+    "checks": {
+      "pitch_mean": {
+        "value": 0.0020192394100525873,
+        "tolerance": 0.15,
+        "passed": true
+      },
+      "pitch_median": {
+        "value": 0.0021270529785818075,
+        "tolerance": 0.15,
+        "passed": true
+      },
+      "formant_f1": {
+        "value": 0.010119095371576762,
+        "tolerance": 0.2,
+        "passed": true
+      },
+      "formant_f2": {
+        "value": 0.0038682769883151545,
+        "tolerance": 0.4,
+        "passed": true
+      }
+    }
+  }
+}

@@ -40,7 +40,7 @@ def spectral_sharpness(
     n_fft: int = 2048,
     power: float = 2.0,
 ) -> torch.Tensor:
-    """Compute Zwicker *sharpness* (in acum) of an audio signal.
+    r"""Compute Zwicker *sharpness* (in acum) of an audio signal.
 
     This implementation approximates the DIN 45692 / ECMA-418-2 standard:
 

@@ -63,6 +63,8 @@ def cepstral_peak_prominence(
     # Clamp to valid range
     q_min = max(q_min, 1)
     q_max = min(q_max, cepstrum.shape[1] - 1)
+    if q_max <= q_min:
+        return torch.zeros(cepstrum.shape[0], device=waveform.device)
 
     cpp_values = []
     

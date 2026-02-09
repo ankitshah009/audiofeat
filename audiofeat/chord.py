@@ -27,6 +27,8 @@ def detect_chords(path: str, hop_length: int = 2048) -> List[Tuple[float, str]]:
     # crude chroma
     chroma = torch.zeros(12, magnitudes.size(-1))
     for i, f in enumerate(freqs):
+        if f.item() <= 0:
+            continue
         bin_idx = int(round(12 * np.log2(f.item() / 440.0) + 69)) % 12
         chroma[bin_idx] += magnitudes[:, i, :].squeeze(0)
 
@@ -36,7 +38,7 @@ def detect_chords(path: str, hop_length: int = 2048) -> List[Tuple[float, str]]:
         v = chroma[:, t]
         best, score = None, -float("inf")
         for chord, template in _CHORD_TEMPLATES.items():
-            s = torch.dot(v, torch.tensor(template, dtype=v.dtype))
+            s = torch.dot(v, torch.tensor(template, dtype=v.dtype, device=v.device))
             if s > score:
                 best, score = chord, s
         chords.append((times[t].item(), best))

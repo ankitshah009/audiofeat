@@ -53,6 +53,8 @@ def extract_speaker_embedding(
         import torchaudio  # local import to avoid hard dep in base install
 
         waveform, sample_rate = torchaudio.load(str(waveform))
+    elif sample_rate is None:
+        raise ValueError("sample_rate is required when passing a tensor waveform.")
 
     if waveform.ndim == 2 and waveform.size(0) > 1:
         import warnings

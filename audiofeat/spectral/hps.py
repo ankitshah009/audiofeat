@@ -68,9 +68,11 @@ def hps(waveform: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_length:
         if kernel_size_h % 2 == 0: # Ensure odd
             kernel_size_h += 1
 
-        padded_freq = torch.nn.functional.pad(magnitude_spectrogram[:, i],
-                                              (kernel_size_h // 2, kernel_size_h // 2),
-                                              mode='reflect')
+        padded_freq = torch.nn.functional.pad(
+            magnitude_spectrogram[:, i].unsqueeze(0).unsqueeze(0),
+            (kernel_size_h // 2, kernel_size_h // 2),
+            mode='reflect',
+        ).squeeze(0).squeeze(0)
         for j in range(magnitude_spectrogram.shape[0]): # Iterate over frequency bins
             window = padded_freq[j : j + kernel_size_h]
             harmonic_mask[j, i] = torch.median(window)
@@ -84,16 +86,21 @@ def hps(waveform: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_length:
         if kernel_size_p % 2 == 0: # Ensure odd
             kernel_size_p += 1
 
-        padded_time = torch.nn.functional.pad(magnitude_spectrogram[i, :],
-                                              (kernel_size_p // 2, kernel_size_p // 2),
-                                              mode='reflect')
+        padded_time = torch.nn.functional.pad(
+            magnitude_spectrogram[i, :].unsqueeze(0).unsqueeze(0),
+            (kernel_size_p // 2, kernel_size_p // 2),
+            mode='reflect',
+        ).squeeze(0).squeeze(0)
         for j in range(magnitude_spectrogram.shape[1]): # Iterate over time frames
             window = padded_time[j : j + kernel_size_p]
             percussive_mask[i, j] = torch.median(window)
 
     # Soft masking (power law)
-    harmonic_mask = (harmonic_mask / (harmonic_mask + percussive_mask + 1e-8))**2
-    percussive_mask = (percussive_mask / (harmonic_mask + percussive_mask + 1e-8))**2
+    harmonic_median = harmonic_mask
+    percussive_median = percussive_mask
+    denom = harmonic_median + percussive_median + 1e-8
+    harmonic_mask = (harmonic_median / denom) ** 2
+    percussive_mask = (percussive_median / denom) ** 2
 
     # Apply masks to the original STFT magnitude
     harmonic_spectrogram = magnitude_spectrogram * harmonic_mask
@@ -107,7 +114,6 @@ def hps(waveform: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_length:
     istft_transform = T.InverseSpectrogram(
         n_fft=n_fft,
         hop_length=hop_length,
-        return_complex=False # Returns real waveform
     )
     harmonic_waveform = istft_transform(harmonic_stft)
     percussive_waveform = istft_transform(percussive_stft)

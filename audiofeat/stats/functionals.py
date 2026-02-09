@@ -26,7 +26,7 @@ def compute_functionals(feature_series: torch.Tensor):
     mean_val = torch.mean(feature_series, dim=0)
 
     # Standard Deviation
-    std_val = torch.std(feature_series, dim=0)
+    std_val = torch.std(feature_series, dim=0, unbiased=False)
 
     # Min
     min_val = torch.min(feature_series, dim=0).values

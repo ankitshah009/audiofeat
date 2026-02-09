@@ -58,16 +58,8 @@ def gfcc(waveform: torch.Tensor, sample_rate: int, n_gfcc: int = 40, n_fft: int 
     )
     mel_spec = mel_spectrogram_transform(waveform)
 
-    # Apply log to the power spectrogram
-    log_mel_spec = torch.log(mel_spec + 1e-8) # Add epsilon to avoid log(0)
-
-    # Apply DCT to get cepstral coefficients
-    # Torchaudio's MFCC transform handles the DCT internally after MelSpectrogram
-    # We can simulate this by applying a DCT manually if needed, but for consistency
-    # with MFCC, we'll use a similar approach.
-    # For a direct DCT, one might use scipy.fft.dct or a custom torch implementation.
-    # Here, we'll just return the log-mel-spectrogram as a proxy for the filterbank output
-    # and note that a true GFCC would involve a DCT on this.
+    # Apply log to the power spectrogram (kept here to mirror the intended pipeline).
+    _ = torch.log(mel_spec + 1e-8) # Add epsilon to avoid log(0)
 
     # As torchaudio.transforms.MFCC applies DCT, we can use it conceptually
     # by setting n_mfcc to n_gfcc and using the mel_spectrogram_config.
@@ -75,7 +67,7 @@ def gfcc(waveform: torch.Tensor, sample_rate: int, n_gfcc: int = 40, n_fft: int 
     mfcc_transform = T.MFCC(
         sample_rate=sample_rate,
         n_mfcc=n_gfcc,
-        mel_spectrogram_config={
+        melkwargs={
             "n_fft": n_fft,
             "hop_length": hop_length,
             "n_mels": n_bands,

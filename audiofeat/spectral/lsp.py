@@ -50,5 +50,12 @@ def lsp_coefficients(lpc_coeffs: torch.Tensor):
     # to ensure correct pairing and ordering in a real application.
     # For a basic test, we'll assume the first 'order' unique sorted angles are the LSPs.
     lsp_freqs = all_angles[:order] / (2 * np.pi) # Normalize to [0, 0.5]
+    if lsp_freqs.shape[0] < order:
+        lsp_freqs = np.pad(
+            lsp_freqs,
+            (0, order - lsp_freqs.shape[0]),
+            mode="constant",
+            constant_values=np.nan,
+        )
 
     return torch.from_numpy(lsp_freqs).to(lpc_coeffs.device)

@@ -2,6 +2,17 @@ import torch
 
 def frame_signal(x: torch.Tensor, frame_length: int, hop_length: int):
     """Frame a 1D signal into overlapping frames."""
+    if frame_length <= 0:
+        raise ValueError("frame_length must be > 0.")
+    if hop_length <= 0:
+        raise ValueError("hop_length must be > 0.")
+    if x.numel() == 0:
+        raise ValueError("Input signal must be non-empty.")
+
+    x = x.flatten()
+    if x.numel() < frame_length:
+        x = torch.cat([x, x.new_zeros(frame_length - x.numel())], dim=0)
+
     num_frames = 1 + (x.numel() - frame_length) // hop_length
     strides = (x.stride(0) * hop_length, x.stride(0))
     shape = (num_frames, frame_length)

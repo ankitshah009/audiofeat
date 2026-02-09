@@ -1,111 +1,78 @@
-# audiofeat: A Comprehensive Audio Feature Extraction Library
+# audiofeat: Comprehensive Audio + Voice Feature Extraction in Python
 
-`audiofeat` is designed to be the most comprehensive publicly available Python library for audio feature extraction. It provides a wide range of temporal, spectral, pitch, and voice-related features, along with various spectrogram representations, all implemented using `torch` for efficient computation.
+`audiofeat` is a PyTorch-first toolkit for extracting temporal, spectral, cepstral, pitch, rhythm, and voice-quality features from audio.
 
-## Features
+It is designed for two usage modes:
 
-### Temporal Features
-- **RMS (Root Mean Square):** Measures the loudness or power of an audio signal.
-- **Short-Time Energy (STE):** The sum of squared signal values in a frame.
-- **Zero-Crossing Rate (ZCR):** Indicates the rate at which the signal changes its sign.
-- **Amplitude Modulation Depth:** Measures the depth of amplitude modulation over a sliding window.
-- **Breath Group Duration:** Estimates the duration of breath groups from the audio envelope.
-- **Speech Rate:** Estimates speech rate in syllables per second.
-- **Log Attack Time:** Measures the time for a signal's envelope to rise to its peak.
-- **Temporal Centroid:** The "center of gravity" of the signal's amplitude envelope.
-- **Entropy of Energy:** Measures abrupt changes in energy within a frame.
-- **Decay Time:** Measures the time for a signal's envelope to decay from its peak.
+- low-level feature engineering (function-by-function DSP)
+- production-style extraction workflows (single file, batch CSV, diagnostics, validation)
 
-### Spectral Features
-- **Spectral Centroid:** Represents the "center of mass" of the spectrum, indicating dominant frequencies.
-- **Spectral Rolloff:** The frequency below which a certain percentage of the total spectral energy is concentrated. Configurable `rolloff_percent` (e.g., 0.85, 0.90, 0.95).
-- **Spectral Flux:** Measures the rate of change of the power spectrum.
-- **Spectral Flatness:** Quantifies how noise-like a sound is, using a `torch`-native geometric mean.
-- **Spectral Entropy:** Measures the randomness or unpredictability of the spectrum.
-- **Spectral Skewness:** Describes the asymmetry of the spectral distribution.
-- **Spectral Spread (Bandwidth):** Measures the bandwidth of the spectrum, or how "spread out" it is around the centroid.
-- **Spectral Slope:** The slope of a linear regression fitted to the spectrum.
-- **Spectral Crest Factor:** Ratio of the max spectral magnitude to the sum of magnitudes; measures "peakiness".
-- **Spectral Contrast:** Measures the amplitude difference between spectral peaks and valleys across several frequency sub-bands, calculated as `(peak - valley) / (peak + valley)`.
-- **Harmonic-to-Noise Ratio (HNR):** Ratio of energy in harmonic components to noise components.
-- **Spectral Deviation:** Quantifies the "jaggedness" of the local spectrum.
-- **Low-High Energy Ratio:** Ratio of energy below 1 kHz to that above 3 kHz.
-- **LPC (Linear Prediction Coefficients):** Coefficients representing the spectral envelope of a signal.
-- **LSP (Line Spectral Pairs):** Robust and compact representation of the LPC filter.
-- **MFCCs (Mel-Frequency Cepstral Coefficients):** Compact representation of the spectral envelope, based on the Mel scale.
-- **Linear Spectrogram (STFT):** Visual representation of the spectrum of frequencies over time.
-- **Mel Spectrogram:** Spectrogram with a Mel-scaled frequency axis, mimicking human auditory perception.
-- **CQT Spectrogram (Constant-Q Transform):** Spectrogram with logarithmically spaced frequency bins. (Note: This is a simplified `torch`-native implementation and not a full, optimized CQT).
-- **Chroma Features:** Represents the intensity of the 12 different pitch classes of the Western musical scale.
-- **Spectral Sharpness (Zwicker Model):** Measures the perceived sharpness of a sound based on the Zwicker model.
-- **Spectral Tonality:** Quantifies the tonal characteristics of a sound using the spectral crest factor.
+The package includes direct Praat comparison tooling and standardized openSMILE feature-set wrappers for reproducible speech research pipelines.
 
-### Cepstral Features
-- **LPCC (Linear Predictive Cepstral Coefficients):** Cepstral coefficients derived from Linear Predictive Coding (LPC) analysis.
-- **GTCC (Gammatone Cepstral Coefficients):** Cepstral coefficients derived from a Gammatone filterbank.
-- **Delta Coefficients:** First-order derivative of a feature contour over time.
-- **Delta-Delta Coefficients:** Second-order derivative of a feature contour over time.
+## Reliability upgrades in this version
 
-### Pitch Features
-- **Fundamental Frequency (F0) Autocorrelation:** Estimates F0 via autocorrelation.
-- **Fundamental Frequency (F0) YIN:** Estimates F0 using the YIN algorithm.
-- **Semitone Standard Deviation:** Standard deviation of F0 in semitones.
-- **Pitch Strength:** Measures the strength of periodicity in a signal.
+- Added a strict `gold-standard` scorecard command that returns a numeric score out of 100.
+- Added CI gate that requires `gold-standard` checks to pass.
+- Added robust CLI diagnostics (`doctor`) with dependency recommendations.
+- Added code-discovered feature catalog (`list-features`) to keep docs aligned with code.
+- Added sample-rate correctness fixes for spectral centroid and rolloff.
+- Added stronger test coverage for CLI, catalog, scorecard, standards, and spectral sample-rate behavior.
 
-### Voice Features
+## Why Praat comparisons can fail
 
-### Advanced ML Wrappers (install with `pip install audiofeat[models]`)
-- **Speaker Diarization** — `audiofeat.diarization.diarize()` for *who-spoke-when* using pyannote-audio.
-- **Speaker Embeddings (ECAPA)** — `audiofeat.embeddings.extract_speaker_embedding()` for voice similarity.
-- **ASR (Whisper)** — `audiofeat.asr.transcribe()` to convert speech to text.
-- **Environmental Sound Classification** — `audiofeat.scene.classify_scene()` returns AudioSet tags.
-- **VAD (Silero)** — `audiofeat.vad.is_speech()` for robust voice activity detection.
-- **Noise Suppression (RNNoise)** — `audiofeat.denoise.denoise_rnn()` for real-time cleanup.
-- **SSL Embeddings (Wav2Vec2 / HuBERT / AST)** — `audiofeat.ssl.embed()` to get 768-D contextual features.
-- **Jitter:** Cycle-to-cycle F0 variation.
-- **Shimmer:** Cycle-to-cycle amplitude variation.
-- **Subharmonic to Harmonic Ratio:** Ratio of subharmonic power to harmonic power.
-- **Normalized Amplitude Quotient (NAQ):** Computed from peak glottal flow, MFDR, and period.
-- **Closed Quotient:** Derived from EGG timings per cycle.
-- **Glottal Closure Time:** Average relative glottal closure time.
-- **Soft Phonation Index:** Derived from low/high band energies.
-- **Speed Quotient:** From glottal flow opening and closing times.
-- **Vocal Fry Index:** Ratio of fry frames to voiced frames.
-- **Voice Onset Time (VOT):** Simplified estimation of voice onset time.
-- **Glottal to Noise Excitation (GNE):** Approximate GNE using band cross-correlations.
-- **Maximum Flow Declination Rate (MFDR):** Approximate MFDR from differentiated glottal flow.
-- **Nasality Index:** Computed from nasal and oral microphone signals.
-- **Vocal Tract Length:** Estimated from the first two formants.
-- **Alpha Ratio:** Ratio of low-frequency energy (50-1k Hz) to high-frequency energy (1-5k Hz).
-- **Hammarberg Index:** Ratio of max energy in 0-2k Hz band to max energy in 2-5k Hz band.
-- **Harmonic Differences (e.g., H1-H2, H1-A3):** Ratios between the amplitudes of specific harmonics.
+Common causes of mismatch between repo output and Praat references:
 
-### Tonal and Musical Features
-- **Tonnetz (Tonal Centroid Features):** A 6-dimensional representation of tonal space based on music theory.
+1. Invalid `.wav` assets (placeholder text files, missing LFS objects, corrupt audio).
+2. Mismatched analysis settings (pitch floor/ceiling, max formant, time step, window length, pre-emphasis).
+3. Backend differences (`burg` approximation vs direct Praat/parselmouth backend).
 
-### Rhythm Features
-- **Tempo:** Estimates the tempo (BPM) of an audio signal.
-- **Beat Tracking:** Performs simple beat tracking on an audio signal.
-
-### Statistical Functionals
-- **Mean:** Average value of a feature over time.
-- **Standard Deviation:** Variability of a feature over time.
-- **Min:** Minimum value of a feature over time.
-- **Max:** Maximum value of a feature over time.
-- **Skewness:** Asymmetry of the feature distribution over time.
-- **Kurtosis:** Peakiness of the feature distribution over time.
-
-## Installation
-
-### Install from PyPI (Recommended)
+Use:
 
 ```bash
+audiofeat doctor --audio-dir examples
+```
+
+and then run validation with explicit settings:
+
+```bash
+audiofeat validate-praat path/to/audio.wav \
+  --extract-praat \
+  --speaker-profile neutral \
+  --pitch-method pyin \
+  --formant-method praat \
+  --output outputs/praat_report.json
+```
+
+## Installation (environment-first)
+
+Python `>=3.8` is required.
+
+### Option A: `venv` (recommended)
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
 pip install audiofeat
 ```
 
-### Install from Source
+### Option B: Conda
 
-To install `audiofeat` from source, clone the repository and install it in editable mode:
+```bash
+conda create -n audiofeat python=3.11 -y
+conda activate audiofeat
+pip install audiofeat
+```
+
+### Option C: `uv`
+
+```bash
+uv venv
+source .venv/bin/activate
+uv pip install audiofeat
+```
+
+### Install from source
 
 ```bash
 git clone https://github.com/ankitshah009/audiofeat.git
@@ -113,54 +80,192 @@ cd audiofeat
 pip install -e .
 ```
 
-### Optional Dependencies
+### Optional dependency extras
 
-For development and examples:
+- `audiofeat[dev]`: tests, linting, type tooling
+- `audiofeat[examples]`: plotting + librosa-style examples
+- `audiofeat[validation]`: Praat/parselmouth validation backend
+- `audiofeat[standards]`: openSMILE eGeMAPS/ComParE wrappers
+- `audiofeat[models]`: heavy wrapper modules (ASR/diarization/etc.)
+- `audiofeat[full]`: examples + validation + standards in one install
+
+Examples:
 
 ```bash
-# For development
-pip install audiofeat[dev]
-
-# For running examples
-pip install audiofeat[examples]
+pip install "audiofeat[validation]"
+pip install "audiofeat[full]"
 ```
 
-## Usage
+## Quick start
 
-Here's a basic example of how to use `audiofeat` to extract various features:
+### Python API
 
 ```python
 import torch
 import audiofeat
 
-# Create a dummy audio signal
-sample_rate = 22050
-duration = 5
-audio_data = torch.randn(sample_rate * duration)
+sr = 22050
+x = torch.randn(sr * 3)
 
-# Compute features
-rms = audiofeat.rms(audio_data, frame_length=2048, hop_length=512)
-zcr = audiofeat.zero_crossing_rate(audio_data)
-spectral_centroid = audiofeat.spectral_centroid(audio_data)
-mel_spec = audiofeat.mel_spectrogram(audio_data, sample_rate)
-mfccs = audiofeat.mfcc(audio_data, sample_rate)
-
-print(f"RMS: {rms.shape}")
-print(f"ZCR: {zcr.shape}")
-print(f"Spectral Centroid: {spectral_centroid.shape}")
-print(f"Mel Spectrogram: {mel_spec.shape}")
-print(f"MFCCs: {mfccs.shape}")
+rms = audiofeat.rms(x, frame_length=2048, hop_length=512)
+zcr = audiofeat.zero_crossing_rate(x, frame_length=2048, hop_length=512)
+centroid = audiofeat.spectral_centroid(x, frame_length=2048, hop_length=512, sample_rate=sr)
+f0 = audiofeat.fundamental_frequency_yin(x, fs=sr, frame_length=2048, hop_length=512)
 ```
 
-For more detailed examples, refer to the `examples/compute_features.py` file.
+### File extraction workflow
 
-## Contributing
+```python
+from audiofeat.io.features import extract_features_from_file
 
-We welcome contributions to `audiofeat`! If you have new features to add, bug fixes, or improvements, please feel free to open a pull request.
+features = extract_features_from_file("path/to/audio.wav")
+print(features["f0_mean_hz"], features["rms_mean"])
+```
+
+## CLI commands
+
+```bash
+audiofeat --help
+```
+
+### `extract`
+
+```bash
+audiofeat extract path/to/audio.wav --output outputs/features.json
+```
+
+### `batch-extract`
+
+```bash
+audiofeat batch-extract path/to/audio_dir outputs/batch_features.csv
+```
+
+### `validate-praat`
+
+```bash
+# validate against existing reference
+audiofeat validate-praat path/to/audio.wav \
+  --praat-json examples/praat_reference.json \
+  --output outputs/praat_report.json
+
+# extract reference directly with parselmouth
+audiofeat validate-praat path/to/audio.wav \
+  --extract-praat \
+  --save-praat-reference outputs/praat_reference.json \
+  --output outputs/praat_report.json
+```
+
+### `extract-opensmile`
+
+```bash
+audiofeat extract-opensmile path/to/audio.wav \
+  --feature-set eGeMAPSv02 \
+  --feature-level Functionals \
+  --output outputs/egemaps.json
+```
+
+### `doctor`
+
+```bash
+audiofeat doctor --audio-dir examples --output outputs/doctor_report.json
+```
+
+### `gold-standard` (objective score out of 100)
+
+```bash
+audiofeat gold-standard --no-optional --min-score 100 --fail-on-any
+```
+
+### `list-features` (code-discovered feature catalog)
+
+```bash
+audiofeat list-features --format json --output outputs/feature_catalog.json
+audiofeat list-features --format markdown --output outputs/FEATURE_CATALOG.md
+```
+
+## Package component map
+
+### `audiofeat.temporal`
+
+Frame-level energy and dynamics descriptors: RMS, ZCR, rhythm features, attack, decay, loudness, modulation-depth style helpers.
+
+### `audiofeat.spectral`
+
+Frequency-domain descriptors: centroid, rolloff, flux, flatness, entropy, moments, contrast, slope, crest, chroma, tonnetz, MFCC/GFCC, LPC/LSP, spectrograms, and formant pipelines.
+
+### `audiofeat.pitch`
+
+Pitch and pitch-derived descriptors: autocorrelation F0, YIN, optional pYIN, pitch strength, semitone variation.
+
+### `audiofeat.voice`
+
+Voice-quality helpers: jitter/shimmer pipelines, CPP, alpha ratio, Hammarberg index, harmonic difference and quality descriptors.
+
+### `audiofeat.cepstral` + `audiofeat.stats`
+
+Cepstral families (LPCC/GTCC, deltas) and statistical functionals (mean/std/min/max/skewness/kurtosis).
+
+### `audiofeat.io`
+
+Robust loading (`load_audio`), single-file summaries, batch extraction, CSV writing, and placeholder-audio detection.
+
+### `audiofeat.validation`
+
+Praat reference extraction/comparison and the `gold-standard` quality scorecard.
+
+### `audiofeat.standards`
+
+openSMILE wrappers for standardized feature sets (eGeMAPS/ComParE) for benchmarking parity.
+
+## Keep README aligned with code automatically
+
+Generate a full feature catalog directly from code:
+
+```bash
+python scripts/generate_feature_catalog.py
+```
+
+Outputs:
+
+- `docs/FEATURE_CATALOG.md`
+- `docs/FEATURE_CATALOG.json`
+
+You can regenerate these whenever modules/functions change.
+
+## Validation methodology
+
+See `docs/VALIDATION.md` for check definitions, scoring details, and CI gating behavior.
+
+## Testing
+
+```bash
+pytest -q
+```
+
+With coverage:
+
+```bash
+pytest --cov=audiofeat --cov-report=term-missing -q
+```
+
+## Troubleshooting
+
+- `Failed to decode audio file`: run `audiofeat doctor`; verify file is real audio, not text placeholder.
+- Large Praat mismatch: align `--speaker-profile`, `--pitch-floor`, `--pitch-ceiling`, `--max-formant`, `--time-step`.
+- Need closest parity run: use `--formant-method praat` with `audiofeat[validation]` installed.
+- Missing openSMILE support: install `audiofeat[standards]`.
+
+## External references used for alignment
+
+- Praat manual (Pitch): <https://praat.org/manual/Sound__To_Pitch__ac____.html>
+- Praat manual (Formant Burg): <https://praat.org/manual/Sound__To_Formant__burg____.html>
+- Praat manual (Formant robust): <https://praat.org/manual/Sound__To_Formant__robust____.html>
+- Parselmouth API docs: <https://parselmouth.readthedocs.io/en/stable/api_reference.html>
+- librosa `pyin`: <https://librosa.org/doc/main/generated/librosa.pyin.html>
+- openSMILE Python docs: <https://audeering.github.io/opensmile-python/>
+- torchaudio transforms docs: <https://pytorch.org/audio/stable/transforms.html>
 
 ## Citation
-
-If you use `audiofeat` in your research, please cite the following Ph.D. thesis:
 
 ```bibtex
 @phdthesis{shah2024computational,

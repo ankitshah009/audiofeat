@@ -63,6 +63,9 @@ Repository = "https://github.com/ankitshah009/audiofeat"
 Documentation = "https://github.com/ankitshah009/audiofeat#readme"
 "Bug Reports" = "https://github.com/ankitshah009/audiofeat/issues"
 
+[project.scripts]
+audiofeat = "audiofeat.cli:main"
+
 [project.optional-dependencies]
 models = [
     "pyannote.audio>=3.1.1",
@@ -88,6 +91,19 @@ examples = [
     "matplotlib",
     "librosa",
     "soundfile",
+]
+validation = [
+    "praat-parselmouth>=0.4.3",
+]
+standards = [
+    "opensmile>=2.5.0",
+]
+full = [
+    "matplotlib",
+    "librosa",
+    "soundfile",
+    "praat-parselmouth>=0.4.3",
+    "opensmile>=2.5.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -120,3 +136,6 @@ extend-exclude = '''
 profile = "black"
 multi_line_output = 3
 line_length = 88
+
+[tool.coverage.report]
+fail_under = 95

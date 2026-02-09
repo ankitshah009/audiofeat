@@ -51,19 +51,18 @@ def tristimulus(waveform: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop
     # Get the magnitudes (amplitude) from the power spectrogram
     magnitudes = torch.sqrt(spec)
 
-    # Assuming the fundamental frequency is the strongest in the first bin
-    # This is a simplification; a more robust approach would involve pitch detection.
-    # For a more accurate fundamental, consider using a pitch tracking algorithm.
-    fundamental_bin = torch.argmax(magnitudes[0, :]) # Taking the first frame
+    # Use average spectrum over time to estimate the dominant frequency bin.
+    mean_spectrum = magnitudes.mean(dim=1)
+    fundamental_bin = int(torch.argmax(mean_spectrum).item())
 
     # Calculate the energy of the fundamental (T1)
     # Sum of magnitudes in the fundamental frequency bin
-    T1 = magnitudes[:, fundamental_bin].sum()
+    T1 = magnitudes[fundamental_bin, :].sum()
 
     # Calculate the energy of the second harmonic (T2)
     # Assuming the second harmonic is at 2 * fundamental_bin
-    second_harmonic_bin = min(2 * fundamental_bin, magnitudes.shape[1] - 1)
-    T2 = magnitudes[:, second_harmonic_bin].sum()
+    second_harmonic_bin = min(2 * fundamental_bin, magnitudes.shape[0] - 1)
+    T2 = magnitudes[second_harmonic_bin, :].sum()
 
     # Calculate the energy of the remaining harmonics (T3)
     # Sum of magnitudes of all other harmonics
