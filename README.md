@@ -25,20 +25,50 @@ Common causes of mismatch between repo output and Praat references:
 1. Invalid `.wav` assets (placeholder text files, missing LFS objects, corrupt audio).
 2. Mismatched analysis settings (pitch floor/ceiling, max formant, time step, window length, pre-emphasis).
 3. Backend differences (`burg` approximation vs direct Praat/parselmouth backend).
+4. Algorithmic differences (YIN produces flatter trajectories than Praat's autocorrelation with pathfinding).
 
-Use:
+### Getting exact Praat parity
+
+For research workflows requiring exact Praat parity, use the Praat backends directly:
+
+```python
+# Pitch extraction with exact Praat parity
+from audiofeat.pitch import fundamental_frequency_praat
+
+f0 = fundamental_frequency_praat(
+    waveform,
+    fs=sample_rate,
+    pitch_floor=75.0,
+    pitch_ceiling=600.0,
+)
+
+# Voice quality metrics with exact Praat parity
+from audiofeat.voice import jitter_shimmer_praat
+
+metrics = jitter_shimmer_praat(
+    waveform,
+    fs=sample_rate,
+    pitch_floor=75.0,
+    pitch_ceiling=300.0,
+)
+print(metrics["jitter_local_percent"], metrics["shimmer_local_percent"])
+```
+
+### Validation workflow
+
+Use `audiofeat doctor` to check audio assets, then run validation:
 
 ```bash
 audiofeat doctor --audio-dir examples
 ```
 
-and then run validation with explicit settings:
+Validate with Praat backend for maximum parity:
 
 ```bash
 audiofeat validate-praat path/to/audio.wav \
   --extract-praat \
   --speaker-profile neutral \
-  --pitch-method pyin \
+  --pitch-method praat \
   --formant-method praat \
   --output outputs/praat_report.json
 ```

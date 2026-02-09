@@ -10,3 +10,9 @@ from .hammarberg import *
 from .harmonic_diff import *
 from .jitter import *
 from .shimmer import *
+
+# Optional Praat-based extraction (requires parselmouth)
+try:
+    from .praat_voice import jitter_shimmer_praat, hnr_praat
+except ImportError:
+    pass

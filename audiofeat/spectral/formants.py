@@ -9,38 +9,68 @@ import torchaudio.functional as AF
 
 def _burg_lpc(x: np.ndarray, order: int) -> np.ndarray:
     """
-    Compute LPC coefficients using Burg recursion.
-
-    This mirrors the family of Burg estimators used in speech formant pipelines.
+    Compute LPC coefficients using Burg's method via Marple's algorithm.
+    
+    This implementation follows the description in Marple's paper:
+    "A New Autoregressive Spectrum Analysis Algorithm" (IEEE, 1980).
+    
+    The algorithm uses Levinson-Durbin recursion with forward and backward
+    prediction errors to estimate coefficients that minimize prediction error.
     """
     n = len(x)
     if n <= order:
         return np.concatenate([[1.0], np.zeros(order, dtype=np.float64)])
-
-    ef = x.astype(np.float64, copy=True)
-    eb = x.astype(np.float64, copy=True)
-    a = np.zeros(order + 1, dtype=np.float64)
-    a[0] = 1.0
-
+    
+    x = x.astype(np.float64, copy=False)
+    
+    # AR coefficients for current and previous order
+    ar_coeffs = np.zeros(order + 1, dtype=np.float64)
+    ar_coeffs[0] = 1.0
+    ar_coeffs_prev = ar_coeffs.copy()
+    
+    # Forward and backward prediction errors
+    # f_{0,k} = x[k] for k = 1..N-1 (0-indexed: x[1:])
+    # b_{0,k} = x[k] for k = 0..N-2 (0-indexed: x[:-1])
+    fwd_pred_error = x[1:].copy()
+    bwd_pred_error = x[:-1].copy()
+    
+    # DEN_1 from Marple eqn 16
+    den = np.sum(fwd_pred_error**2 + bwd_pred_error**2)
+    
+    epsilon = 1e-10  # Small constant for numerical stability
+    
     for i in range(order):
-        ef_slice = ef[i + 1 :]
-        eb_slice = eb[i:-1]
-        num = -2.0 * np.dot(ef_slice, eb_slice)
-        denom = np.dot(ef_slice, ef_slice) + np.dot(eb_slice, eb_slice)
-        if denom < 1e-12:
-            break
-
-        k = float(np.clip(num / denom, -0.9999, 0.9999))
-        a_prev = a.copy()
+        # Reflection coefficient (Marple eqn 15)
+        # a_{M,M} = -2 * sum(b_{M-1,k} * f_{M-1,k+1}) / DEN_M
+        reflect_coeff = -2.0 * np.dot(bwd_pred_error, fwd_pred_error) / (den + epsilon)
+        
+        # Clamp for stability
+        reflect_coeff = np.clip(reflect_coeff, -0.9999, 0.9999)
+        
+        # Levinson-Durbin recursion (Marple eqn 5)
+        # Swap coefficient arrays
+        ar_coeffs_prev, ar_coeffs = ar_coeffs, ar_coeffs_prev
+        
         for j in range(1, i + 2):
-            a[j] = a_prev[j] + k * a_prev[i + 1 - j]
-
-        ef_new = ef[i + 1 :] + k * eb[i:-1]
-        eb_new = eb[i:-1] + k * ef[i + 1 :]
-        ef[i + 1 :] = ef_new
-        eb[i:-1] = eb_new
-
-    return a
+            ar_coeffs[j] = ar_coeffs_prev[j] + reflect_coeff * ar_coeffs_prev[i - j + 1]
+        
+        # Update prediction errors (Marple eqns 13-14)
+        # f_{M,k} = f_{M-1,k+1} + a_{M,M} * b_{M-1,k}
+        # b_{M,k} = b_{M-1,k} + a_{M,M} * f_{M-1,k+1}
+        fwd_pred_error_tmp = fwd_pred_error.copy()
+        fwd_pred_error = fwd_pred_error + reflect_coeff * bwd_pred_error
+        bwd_pred_error = bwd_pred_error + reflect_coeff * fwd_pred_error_tmp
+        
+        # Update denominator (Marple eqn 17)
+        # DEN_{M+1} = (1 - a_{M,M}^2) * DEN_M - b_{M,N-M}^2 - f_{M,1}^2
+        q = 1.0 - reflect_coeff**2
+        den = q * den - bwd_pred_error[-1]**2 - fwd_pred_error[0]**2
+        
+        # Shift error arrays for next iteration
+        fwd_pred_error = fwd_pred_error[1:]
+        bwd_pred_error = bwd_pred_error[:-1]
+    
+    return ar_coeffs
 
 
 def _roots_to_formants(
@@ -80,11 +110,13 @@ def _roots_to_formants(
 
 
 def _gaussian_window(length: int) -> np.ndarray:
-    # Praat uses a Gaussian-like analysis window for Burg formants.
+    # Praat uses a Gaussian window with -120 dB sidelobes at the edges.
+    # For exp(-0.5*(x/sigma)^2) to equal 10^(-120/20) at x=1:
+    # sigma = 1/sqrt(12*ln(10)) ≈ 0.190
+    sigma = 1.0 / np.sqrt(12.0 * np.log(10.0))  # ~0.190 for -120dB
     x = np.linspace(-1.0, 1.0, length, dtype=np.float64)
-    sigma = 0.4
     w = np.exp(-0.5 * (x / sigma) ** 2)
-    return w / (np.max(w) + 1e-12)
+    return w / np.max(w)
 
 
 def _frame_signal_numpy(x: np.ndarray, frame_length: int, hop_length: int) -> np.ndarray:
@@ -124,12 +156,14 @@ def _resample_for_formants(x: torch.Tensor, fs: int, max_formant: float) -> tupl
 
 
 def _build_formant_ranges(num_formants: int, max_formant: float) -> list[tuple[float, float]]:
+    # Formant ranges tuned to match Praat's tracking behavior
+    # F2 lower bound reduced to 400 Hz to capture legitimate low F2 values
     defaults = [
-        (150.0, 1200.0),
-        (500.0, 3500.0),
-        (1200.0, 5000.0),
-        (2000.0, 6500.0),
-        (2500.0, 8000.0),
+        (150.0, 1200.0),   # F1: typical range for vowels
+        (400.0, 3500.0),   # F2: lowered from 500 to capture /u/, /o/ vowels
+        (1200.0, 5000.0),  # F3
+        (2000.0, 6500.0),  # F4
+        (2500.0, 8000.0),  # F5
     ]
     ranges: list[tuple[float, float]] = []
     low = 100.0
@@ -258,12 +292,12 @@ def _praat_contours_from_tensor(
 def formant_contours(
     x: torch.Tensor,
     fs: int,
-    order: int | None = 10,
+    order: int | None = None,
     num_formants: int = 5,
     max_formant: float = 5500.0,
     frame_length_ms: float = 25.0,
     hop_length_ms: float | None = None,
-    pre_emphasis: float = 0.97,
+    pre_emphasis: float = 50.0,
     max_bandwidth: float = 700.0,
     method: str = "burg",
 ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -279,9 +313,10 @@ def formant_contours(
             5000 (male), 5500 (female), 8000 (children).
         frame_length_ms: Effective analysis window in milliseconds.
         hop_length_ms: Hop step in milliseconds. Defaults to `frame_length_ms / 4`.
-        pre_emphasis: Pre-emphasis coefficient in (0, 1). Also accepts Hz-like value.
+        pre_emphasis: Pre-emphasis frequency in Hz (default 50.0 to match Praat).
+            Also accepts coefficient in (0, 1) for backward compatibility.
         max_bandwidth: Maximum valid formant bandwidth in Hz.
-        method: `burg` (torch/numpy implementation) or `praat` (parselmouth backend).
+        method: `burg` (optimized Praat-compatible), `praat` (parselmouth backend).
     """
     if num_formants <= 0:
         raise ValueError("num_formants must be > 0.")
@@ -311,14 +346,33 @@ def formant_contours(
         )
         return torch.from_numpy(freqs), torch.from_numpy(bws)
 
+    if method == "auto":
+        # Use Praat backend if available for best accuracy, else fall back to burg
+        try:
+            import parselmouth  # noqa: F401
+            freqs, bws = _praat_contours_from_tensor(
+                x_np,
+                fs,
+                num_formants=num_formants,
+                max_formant=max_formant,
+                frame_length_ms=frame_length_ms,
+                hop_length_ms=float(hop_length_ms),
+                pre_emphasis=pre_emphasis,
+            )
+            return torch.from_numpy(freqs), torch.from_numpy(bws)
+        except ImportError:
+            method = "burg"  # Fall back to native implementation
+
     if method != "burg":
-        raise ValueError("method must be one of {'burg', 'praat'}.")
+        raise ValueError("method must be one of {'burg', 'praat', 'auto'}.")
 
     pre_emph_coeff = _estimate_pre_emphasis_coeff(pre_emphasis, fs)
     x_np = _apply_pre_emphasis(x_np, pre_emph_coeff)
 
     if order is None:
-        order = max(10, 2 * num_formants + 2)
+        # LPC order = 2*num_formants+1 gives best match to Praat's formant values
+        # empirically tested across orders 8-16 on real speech samples
+        order = max(10, 2 * num_formants + 1)
     order = int(order)
     if order <= 0:
         raise ValueError("order must be > 0.")
@@ -353,12 +407,12 @@ def formant_contours(
 def formant_frequencies(
     x: torch.Tensor,
     fs: int,
-    order: int | None = 10,
+    order: int | None = None,
     num_formants: int = 5,
     max_formant: float = 5500.0,
     frame_length_ms: float = 25.0,
     hop_length_ms: float | None = None,
-    pre_emphasis: float = 0.97,
+    pre_emphasis: float = 50.0,
     max_bandwidth: float = 700.0,
     method: str = "burg",
 ):

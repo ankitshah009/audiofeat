@@ -141,8 +141,23 @@ def _audiofeat_pitch_stats(
             fmax=pitch_ceiling,
             fill_unvoiced=0.0,
         )
+    elif method == "praat":
+        try:
+            from ..pitch.pitch_praat import fundamental_frequency_praat
+        except ImportError as exc:
+            raise ImportError(
+                "praat-parselmouth is required for pitch_method='praat'. "
+                "Install with `pip install \"audiofeat[validation]\"`."
+            ) from exc
+        f0 = fundamental_frequency_praat(
+            waveform,
+            fs=sample_rate,
+            pitch_floor=pitch_floor,
+            pitch_ceiling=pitch_ceiling,
+            fill_unvoiced=0.0,
+        )
     else:
-        raise ValueError("pitch method must be one of {'autocorr', 'yin', 'pyin'}.")
+        raise ValueError("pitch method must be one of {'autocorr', 'yin', 'pyin', 'praat'}.")
 
     voiced = f0[f0 > 0]
     if voiced.numel() == 0:
