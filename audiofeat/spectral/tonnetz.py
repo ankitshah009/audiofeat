@@ -1,57 +1,84 @@
+"""Tonal centroid (Tonnetz) features — Harte, Sandler & Gasser (2006).
 
+Projects L1-normalized chroma onto a 6-D basis representing
+the perfect fifth, minor third, and major third as 2-D coordinates.
+
+Primary path delegates to ``librosa.feature.tonnetz``.  The fallback
+reproduces librosa's exact transformation matrix so outputs match
+regardless of which path is taken.
+"""
+
+from __future__ import annotations
+
+import numpy as np
 import torch
 
+
+def _fallback_tonnetz(chroma_features: torch.Tensor) -> torch.Tensor:
+    """Reproduce librosa's tonnetz transform exactly in PyTorch.
+
+    librosa source (feature/spectral.py, ~line 1812):
+        dim_map = linspace(0, 12, n_chroma, endpoint=False)
+        scale   = [7/6, 7/6, 3/2, 3/2, 2/3, 2/3]
+        V       = outer(scale, dim_map);  V[::2] -= 0.5
+        R       = [1, 1, 1, 1, 0.5, 0.5]
+        phi     = R[:, None] * cos(pi * V)
+        tonnetz = phi @ normalize(chroma, L1, axis=0)
+    """
+    n_chroma = chroma_features.shape[0]
+    chroma = torch.nn.functional.normalize(
+        chroma_features.float(), p=1, dim=0, eps=1e-12
+    )
+
+    # numpy.linspace(0, 12, 12, endpoint=False) = [0, 1, ..., 11]
+    dim_map = torch.arange(n_chroma, device=chroma.device, dtype=torch.float32) * (
+        12.0 / n_chroma
+    )
+
+    scale = torch.tensor(
+        [7.0 / 6, 7.0 / 6, 3.0 / 2, 3.0 / 2, 2.0 / 3, 2.0 / 3],
+        device=chroma.device,
+        dtype=torch.float32,
+    )
+    V = torch.outer(scale, dim_map)  # (6, n_chroma)
+    V[::2] -= 0.5
+
+    R = torch.tensor(
+        [1.0, 1.0, 1.0, 1.0, 0.5, 0.5],
+        device=chroma.device,
+        dtype=torch.float32,
+    )
+    phi = R.unsqueeze(1) * torch.cos(torch.pi * V)  # (6, n_chroma)
+
+    return phi @ chroma  # (6, frames)
+
+
 def tonnetz(chroma_features: torch.Tensor):
-    """
-    Computes the Tonnetz (Tonal Centroid Features) from Chroma features.
+    """Compute tonal centroid (Tonnetz), matching librosa when available.
 
-    Args:
-        chroma_features (torch.Tensor): The Chroma features (n_chroma, time_frames).
-                                        Expected n_chroma = 12.
+    Parameters
+    ----------
+    chroma_features : torch.Tensor
+        Shape ``(12, frames)`` — L1-normalized chroma energy per frame.
 
-    Returns:
-        torch.Tensor: The Tonnetz features (6, time_frames).
+    Returns
+    -------
+    torch.Tensor
+        Shape ``(6, frames)`` — tonal centroid features.
     """
+    if chroma_features.dim() != 2:
+        raise ValueError("chroma_features must be 2-D with shape (12, frames).")
     if chroma_features.shape[0] != 12:
-        raise ValueError("Chroma features must have 12 bins for Tonnetz calculation.")
+        raise ValueError("chroma_features must have 12 pitch-class bins.")
 
-    # Tonnetz basis vectors for 6 dimensions:
-    # 0: fifths (C-G axis)
-    # 1: minor thirds (C-Eb axis)
-    # 2: major thirds (C-E axis)
-    # 3: fifths (sin component)
-    # 4: minor thirds (sin component)
-    # 5: major thirds (sin component)
+    device = chroma_features.device
 
-    # These are derived from the circle of fifths and other musical intervals
-    # and projected onto a 2D plane for each pair of intervals.
-    # The values are typically normalized.
+    try:
+        import librosa  # type: ignore
+    except ModuleNotFoundError:
+        return _fallback_tonnetz(chroma_features)
 
-    # Cosine components (real part of complex exponential)
-    cos_fifths = torch.cos(torch.arange(12) * 2 * torch.pi / 12)
-    cos_minor_thirds = torch.cos(torch.arange(12) * 2 * torch.pi / 4) # 3 semitones per step
-    cos_major_thirds = torch.cos(torch.arange(12) * 2 * torch.pi / 3) # 4 semitones per step
-
-    # Sine components (imaginary part of complex exponential)
-    sin_fifths = torch.sin(torch.arange(12) * 2 * torch.pi / 12)
-    sin_minor_thirds = torch.sin(torch.arange(12) * 2 * torch.pi / 4)
-    sin_major_thirds = torch.sin(torch.arange(12) * 2 * torch.pi / 3)
-
-    # Combine into a 6x12 transformation matrix
-    tonnetz_basis = torch.stack([
-        cos_fifths,
-        cos_minor_thirds,
-        cos_major_thirds,
-        sin_fifths,
-        sin_minor_thirds,
-        sin_major_thirds
-    ], dim=0).to(chroma_features.device)
-
-    # Apply the transformation
-    tonnetz_features = torch.matmul(tonnetz_basis, chroma_features)
-
-    # Normalize each Tonnetz dimension (optional, but common)
-    # For example, normalize by the maximum value of each dimension
-    # tonnetz_features = tonnetz_features / (tonnetz_features.abs().max(dim=1, keepdim=True).values + 1e-8)
-
-    return tonnetz_features
+    tonnetz_np = librosa.feature.tonnetz(
+        chroma=chroma_features.detach().cpu().numpy().astype(np.float32, copy=False)
+    )
+    return torch.from_numpy(tonnetz_np.astype(np.float32, copy=False)).to(device=device)

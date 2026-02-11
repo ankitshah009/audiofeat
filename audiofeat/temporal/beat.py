@@ -1,105 +1,107 @@
+from __future__ import annotations
+
+import numpy as np
 import torch
-import torchaudio
-import torchaudio.transforms as T
-import torch.nn.functional as F
 
-def beat_track(waveform: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_length: int = 512,
-               tempo_min: float = 60.0, tempo_max: float = 240.0) -> tuple[torch.Tensor, torch.Tensor]:
-    """
-    Performs beat tracking on an audio waveform to estimate tempo and beat times.
 
-    Parameters
-    ----------
-    waveform : torch.Tensor
-        Mono audio waveform tensor. Expected shape: (num_samples,) or (1, num_samples).
-    sample_rate : int
-        Sampling rate of the waveform.
-    n_fft : int
-        Size of the FFT window.
-    hop_length : int
-        Number of samples between successive frames.
-    tempo_min : float
-        Minimum tempo to consider (BPM).
-    tempo_max : float
-        Maximum tempo to consider (BPM).
+def _to_mono_tensor(waveform: torch.Tensor) -> torch.Tensor:
+    if waveform.dim() == 1:
+        return waveform.float()
+    if waveform.dim() == 2:
+        if waveform.shape[0] == 1:
+            return waveform.squeeze(0).float()
+        return waveform.mean(dim=0).float()
+    raise ValueError("waveform must be 1-D or 2-D (channels, samples).")
 
-    Returns
-    -------
-    tuple[torch.Tensor, torch.Tensor]
-        A tuple containing:
-        - estimated_tempo (torch.Tensor): Estimated tempo in BPM.
-        - beat_frames (torch.Tensor): Frame indices of detected beats.
 
-    Notes
-    -----
-    This is a simplified beat tracking algorithm based on onset detection and
-    autocorrelation of the onset detection function (ODF).
-    More robust beat tracking algorithms often involve complex comb filtering
-    and dynamic programming (e.g., DP-based beat tracking in librosa).
-    Requires 'torch' and 'torchaudio' to be installed.
-    """
-    if waveform.ndim > 1 and waveform.shape[0] > 1:
-        waveform = waveform[0]
-    elif waveform.ndim == 0:
-        raise ValueError("Input waveform cannot be a scalar.")
+def _fallback_beat_track(
+    waveform: torch.Tensor,
+    sample_rate: int,
+    hop_length: int,
+    tempo_min: float,
+    tempo_max: float,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    x = waveform - waveform.mean()
+    n = x.numel()
+    if n < 4:
+        return (
+            torch.tensor(0.0, dtype=torch.float32, device=waveform.device),
+            torch.zeros(0, dtype=torch.int64, device=waveform.device),
+        )
+    onset_env = torch.relu(x[1:] - x[:-1])
+    onset_env = torch.nn.functional.avg_pool1d(
+        onset_env.view(1, 1, -1),
+        kernel_size=max(1, hop_length),
+        stride=max(1, hop_length),
+    ).flatten()
+    if onset_env.numel() < 4:
+        return (
+            torch.tensor(0.0, dtype=torch.float32, device=waveform.device),
+            torch.zeros(0, dtype=torch.int64, device=waveform.device),
+        )
 
-    # Compute the STFT magnitude spectrogram
-    spectrogram_transform = T.Spectrogram(
-        n_fft=n_fft,
-        hop_length=hop_length,
-        power=2.0, # Power spectrogram
+    onset_env = onset_env - onset_env.mean()
+    ac = torch.fft.irfft(torch.fft.rfft(onset_env) * torch.conj(torch.fft.rfft(onset_env)))
+
+    min_lag = max(1, int(round((60.0 / tempo_max) * sample_rate / hop_length)))
+    max_lag = min(ac.numel() - 1, int(round((60.0 / tempo_min) * sample_rate / hop_length)))
+    if max_lag <= min_lag:
+        return (
+            torch.tensor(0.0, dtype=torch.float32, device=waveform.device),
+            torch.zeros(0, dtype=torch.int64, device=waveform.device),
+        )
+
+    lag = int(torch.argmax(ac[min_lag:max_lag]).item()) + min_lag
+    tempo = 60.0 * sample_rate / (hop_length * lag)
+    beat_frames = torch.arange(0, onset_env.numel(), step=max(lag, 1), device=waveform.device)
+    return (
+        torch.tensor(float(tempo), dtype=torch.float32, device=waveform.device),
+        beat_frames.long(),
     )
-    spec = spectrogram_transform(waveform)
-    magnitudes = torch.sqrt(spec) # Amplitude spectrogram
 
-    # Compute spectral flux (as an ODF)
-    spectral_flux = torch.cat([
-        torch.zeros(1, magnitudes.shape[0], device=waveform.device),
-        torch.norm(magnitudes[:, 1:] - magnitudes[:, :-1], dim=0, p=2).unsqueeze(0)
-    ], dim=1).squeeze(0)
 
-    # Normalize spectral flux
-    spectral_flux = (spectral_flux - spectral_flux.min()) / (spectral_flux.max() - spectral_flux.min() + 1e-8)
+def beat_track(
+    waveform: torch.Tensor,
+    sample_rate: int,
+    n_fft: int = 2048,
+    hop_length: int = 512,
+    tempo_min: float = 60.0,
+    tempo_max: float = 240.0,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """
+    Beat tracking with librosa parity when available.
+    """
+    if sample_rate <= 0:
+        raise ValueError("sample_rate must be > 0.")
+    if hop_length <= 0:
+        raise ValueError("hop_length must be > 0.")
+    if tempo_min <= 0 or tempo_max <= tempo_min:
+        raise ValueError("Expected 0 < tempo_min < tempo_max.")
 
-    # Compute autocorrelation of the ODF to find periodicity (tempo)
-    # This is a simplified autocorrelation. For better results, consider
-    # using a dedicated autocorrelation function or onset auto-correlation.
-    autocorr = F.conv1d(
-        spectral_flux.unsqueeze(0).unsqueeze(0),
-        spectral_flux.flip(dims=[0]).unsqueeze(0).unsqueeze(0),
-        padding=max(0, spectral_flux.numel() - 1),
-    ).squeeze()
+    x = _to_mono_tensor(waveform)
+    device = waveform.device
 
-    # Find peaks in the autocorrelation function within the tempo range
-    # Convert tempo (BPM) to frames per beat
-    min_frames_per_beat = 60.0 / tempo_max * (sample_rate / hop_length)
-    max_frames_per_beat = 60.0 / tempo_min * (sample_rate / hop_length)
+    try:
+        import librosa  # type: ignore
+    except ModuleNotFoundError:
+        return _fallback_beat_track(x, sample_rate, hop_length, tempo_min, tempo_max)
 
-    # Search for the strongest peak in the autocorrelation within the valid range
-    peak_val = 0.0
-    estimated_tempo = 0.0
-    best_lag = 0
-
-    for lag in range(int(min_frames_per_beat), int(max_frames_per_beat) + 1):
-        if lag < autocorr.shape[0] and autocorr[lag] > peak_val:
-            peak_val = autocorr[lag]
-            best_lag = lag
-
-    if best_lag > 0:
-        estimated_tempo = 60.0 / (best_lag * hop_length / sample_rate)
-
-    # Beat tracking: find peaks in the ODF that align with the estimated tempo
-    beat_frames = []
-    if estimated_tempo > 0:
-        # Simple peak picking with periodicity constraint
-        interval_frames = int(round(60.0 / estimated_tempo * (sample_rate / hop_length)))
-        if interval_frames > 0:
-            for i in range(0, len(spectral_flux), interval_frames):
-                # Find local maximum around the expected beat position
-                search_window_start = max(0, i - interval_frames // 4)
-                search_window_end = min(len(spectral_flux), i + interval_frames // 4)
-                if search_window_start < search_window_end:
-                    max_val, max_idx = torch.max(spectral_flux[search_window_start:search_window_end], dim=0)
-                    beat_frames.append(search_window_start + max_idx.item())
-
-    return torch.tensor(estimated_tempo, dtype=torch.float32, device=waveform.device), torch.tensor(beat_frames, dtype=torch.int64, device=waveform.device)
+    y = x.detach().cpu().numpy().astype(np.float32, copy=False)
+    onset_env = librosa.onset.onset_strength(
+        y=y,
+        sr=int(sample_rate),
+        n_fft=int(n_fft),
+        hop_length=int(hop_length),
+        aggregate=np.median,
+    )
+    tempo, beat_frames = librosa.beat.beat_track(
+        onset_envelope=onset_env,
+        sr=int(sample_rate),
+        hop_length=int(hop_length),
+        start_bpm=float(np.clip((tempo_min + tempo_max) / 2.0, 40.0, 300.0)),
+        tightness=100,
+    )
+    tempo_val = float(np.asarray(tempo).flat[0])
+    tempo_tensor = torch.tensor(tempo_val, dtype=torch.float32, device=device)
+    beat_tensor = torch.from_numpy(np.asarray(beat_frames, dtype=np.int64)).to(device=device)
+    return tempo_tensor, beat_tensor

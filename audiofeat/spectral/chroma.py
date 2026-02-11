@@ -1,107 +1,180 @@
+"""Chromagram (STFT-based) — Ellis (2007).
+
+Computes a chroma filterbank by projecting FFT bins onto pitch classes
+using Gaussian bumps in log-frequency space, with an octave-dominance
+weighting.
+
+Primary path delegates to ``librosa.feature.chroma_stft``.
+The fallback builds the filterbank in PyTorch following the same
+algorithm as ``librosa.filters.chroma`` so that the two paths produce
+comparable output.
+"""
+
+from __future__ import annotations
+
+import numpy as np
 import torch
 import torchaudio.transforms as T
 
-def chroma(audio_data: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_length: int = 512, n_chroma: int = 12):
+
+def _to_mono_numpy(audio_data: torch.Tensor) -> np.ndarray:
+    x = audio_data.detach().float().cpu()
+    if x.dim() == 0:
+        raise ValueError("Input audio_data cannot be a scalar.")
+    if x.dim() == 1:
+        return x.numpy()
+    if x.dim() == 2:
+        if x.shape[0] == 1:
+            return x.squeeze(0).numpy()
+        return x.mean(dim=0).numpy()
+    raise ValueError("audio_data must be 1-D or 2-D (channels, samples).")
+
+
+def _chroma_filterbank(
+    sample_rate: int,
+    n_fft: int,
+    n_chroma: int = 12,
+    tuning: float = 0.0,
+    ctroct: float = 5.0,
+    octwidth: float = 2.0,
+    device: torch.device | None = None,
+    dtype: torch.dtype = torch.float32,
+) -> torch.Tensor:
+    """Build a chroma filterbank matching librosa.filters.chroma.
+
+    Follows the same algorithm: Gaussian bumps in log-frequency,
+    column L2-normalized, with octave-dominance Gaussian weighting,
+    rolled to start at C.
     """
-    Computes the Chroma features of an audio signal.
+    # Frequencies for bins 1..n_fft-1 (skip DC)
+    # librosa: np.linspace(0, sr, n_fft, endpoint=False)[1:]
+    freqs = (torch.arange(1, n_fft, device=device, dtype=dtype) * (float(sample_rate) / n_fft))
 
-    Args:
-        audio_data (torch.Tensor): The audio signal.
-        sample_rate (int): The sample rate of the audio.
-        n_fft (int): The number of FFT points.
-        hop_length (int): The number of samples to slide the window.
-        n_chroma (int): The number of chroma bins (typically 12).
+    # Convert Hz to fractional chroma bins using librosa.hz_to_octs:
+    #   A440_adj = 440 * 2^(tuning/n_chroma)
+    #   octs = log2(freq / (A440_adj / 16))
+    # Then frqbins = n_chroma * octs
+    A440_adj = 440.0 * (2.0 ** (tuning / n_chroma))
+    frqbins = n_chroma * torch.log2(freqs / (A440_adj / 16.0))
 
-    Returns:
-        torch.Tensor: The Chroma features (n_chroma, time_frames).
+    # DC bin: 1.5 octaves below bin 1
+    dc_val = frqbins[0] - 1.5 * n_chroma
+    frqbins = torch.cat([dc_val.unsqueeze(0), frqbins])  # length n_fft
+
+    # Bin widths
+    binwidths = torch.cat([
+        torch.clamp(frqbins[1:] - frqbins[:-1], min=1.0),
+        torch.ones(1, device=device, dtype=dtype),
+    ])
+
+    # Distance matrix: D[c, f] = frqbins[f] - c
+    chroma_idx = torch.arange(n_chroma, device=device, dtype=dtype)
+    D = frqbins.unsqueeze(0) - chroma_idx.unsqueeze(1)  # (n_chroma, n_fft)
+
+    # Wrap into [-n_chroma/2, n_chroma/2]
+    n_chroma2 = round(n_chroma / 2.0)
+    D = torch.remainder(D + n_chroma2 + 10 * n_chroma, n_chroma) - n_chroma2
+
+    # Gaussian bumps (narrowed by factor of 2)
+    wts = torch.exp(-0.5 * (2.0 * D / binwidths.unsqueeze(0)) ** 2)
+
+    # Column-normalize (L2)
+    col_norms = torch.norm(wts, p=2, dim=0, keepdim=True)
+    wts = wts / (col_norms + 1e-12)
+
+    # Octave dominance weighting
+    if octwidth > 0:
+        octs_for_weight = frqbins / n_chroma
+        oct_weight = torch.exp(-0.5 * ((octs_for_weight - ctroct) / octwidth) ** 2)
+        wts = wts * oct_weight.unsqueeze(0)
+
+    # Roll to start at C (base_c=True)
+    wts = torch.roll(wts, shifts=-3 * (n_chroma // 12), dims=0)
+
+    # Keep only rfft bins: [0, n_fft//2]
+    return wts[:, : n_fft // 2 + 1]
+
+
+def _fallback_chroma(
+    audio_data: torch.Tensor,
+    sample_rate: int,
+    n_fft: int,
+    hop_length: int,
+    n_chroma: int,
+) -> torch.Tensor:
+    """Compute chroma using the PyTorch filterbank + STFT."""
+    x = audio_data.float()
+    if x.dim() == 2:
+        x = x.mean(dim=0) if x.shape[0] > 1 else x.squeeze(0)
+    x = x.flatten()
+    device = x.device
+
+    # Power spectrogram — librosa uses center=True with zero-padding
+    stft = T.Spectrogram(n_fft=n_fft, hop_length=hop_length, power=2.0, pad_mode='constant')(x)
+
+    # Build filterbank
+    fb = _chroma_filterbank(
+        sample_rate, n_fft, n_chroma, tuning=0.0,
+        device=device, dtype=stft.dtype,
+    )
+
+    raw_chroma = fb @ stft
+
+    # L-inf normalize each frame (column)
+    max_vals = raw_chroma.abs().max(dim=0, keepdim=True).values
+    chroma_norm = raw_chroma / (max_vals + 1e-12)
+    return chroma_norm
+
+
+def chroma(
+    audio_data: torch.Tensor,
+    sample_rate: int,
+    n_fft: int = 2048,
+    hop_length: int = 512,
+    n_chroma: int = 12,
+) -> torch.Tensor:
+    """Compute chroma features, matching ``librosa.feature.chroma_stft``.
+
+    Parameters
+    ----------
+    audio_data : torch.Tensor
+        Audio waveform.
+    sample_rate : int
+        Sample rate in Hz.
+    n_fft : int
+        FFT window size.
+    hop_length : int
+        Hop length for STFT.
+    n_chroma : int
+        Number of chroma bins (default 12).
+
+    Returns
+    -------
+    torch.Tensor
+        Shape ``(n_chroma, frames)``.
     """
-    # Compute STFT magnitude spectrogram
-    spectrogram_transform = T.Spectrogram(n_fft=n_fft, hop_length=hop_length, window_fn=torch.hann_window, return_complex=True)
-    magnitude_spectrogram = torch.abs(spectrogram_transform(audio_data))
+    if sample_rate <= 0:
+        raise ValueError("sample_rate must be > 0.")
+    if n_fft <= 0 or hop_length <= 0 or n_chroma <= 0:
+        raise ValueError("n_fft, hop_length, and n_chroma must be > 0.")
 
-    # Create a chroma filter bank
-    # This is a simplified approach; a more accurate one would use a log-frequency scale
-    # and consider the exact frequencies of musical notes.
-    
-    # Frequencies corresponding to STFT bins
-    freqs = torch.linspace(0, sample_rate / 2, magnitude_spectrogram.shape[0], device=audio_data.device)
+    device = audio_data.device
 
-    # Initialize chroma filter bank
-    chroma_filter_bank = torch.zeros(n_chroma, magnitude_spectrogram.shape[0], device=audio_data.device)
+    try:
+        import librosa  # type: ignore
+    except ModuleNotFoundError:
+        return _fallback_chroma(audio_data, sample_rate, n_fft, hop_length, n_chroma).to(device)
 
-    # Map frequencies to chroma bins
-    # Reference A4 = 440 Hz
-    a4_midi = 69
-    for i in range(n_chroma):
-        # Calculate MIDI note number for each chroma bin (assuming C is 0, C# is 1, etc.)
-        # We'll center the chroma bins around A4 (MIDI 69)
-        # The formula for frequency from MIDI is f = 440 * 2^((midi_note - 69)/12)
-        # The formula for MIDI from frequency is midi_note = 69 + 12 * log2(f/440)
-        
-        # For each chroma bin, define a frequency range
-        # This is a very simplified mapping. A real chroma transform would use a more sophisticated filter bank.
-        # For now, we'll just assign STFT bins to the closest chroma bin.
-        
-        # Calculate the center frequency for this chroma bin (relative to A4)
-        # Example: for C (chroma 0), it's 3 semitones below A4, so midi_note = 69 - 9 = 60 (C5)
-        # For A (chroma 9), it's A4, so midi_note = 69
-        # For C# (chroma 1), it's 4 semitones below A4, so midi_note = 69 - 8 = 61 (C#5)
-        
-        # Let's simplify and just map based on the 12 semitones in an octave
-        # We'll consider frequencies from 20 Hz to 20000 Hz
-        min_freq = 20.0
-        max_freq = 20000.0
-        
-        # Iterate through octaves and assign frequencies to chroma bins
-        for octave in range(10): # Cover a few octaves
-            # Calculate the base frequency for this chroma bin in the current octave
-            # C0 is 16.35 Hz (MIDI 24)
-            # midi_note = 24 + i + (octave * 12)
-            # freq_center = 440 * (2**((midi_note - 69)/12))
-            
-            # A simpler approach: just assign a range of frequencies to each chroma bin
-            # This is a very rough approximation of a chroma filter bank
-            
-            # Define frequency range for each chroma bin (e.g., 100 Hz width)
-            # This is not musically accurate, but demonstrates the concept
-            # A proper implementation would use a log-frequency scale and overlapping filters
-            
-            # For demonstration, let's just assign a simple linear range for each chroma
-            # This is highly inaccurate for musical chroma, but shows the structure.
-            # A real chroma filter bank would be more complex.
-            
-            # Let's use a very basic mapping: divide the frequency range into 12 equal parts
-            # and assign each part to a chroma bin. This is NOT how musical chroma works.
-            # This is just to get a working tensor of the correct shape.
-            
-            # A more reasonable approach for a placeholder: assign a range of STFT bins
-            # to each chroma bin, based on a logarithmic frequency scale.
-            
-            # This is still a placeholder, but slightly more aligned with musical concepts
-            # than a linear division.
-            
-            # Calculate the frequency range for each chroma bin
-            # We'll use a simplified logarithmic mapping for demonstration
-            # This is still not a true CENS or VQT-based chroma.
-            
-            # Let's use a simple approach: assign each STFT bin to its closest MIDI note,
-            # then map MIDI note to chroma.
-            
-            # Convert frequencies to MIDI notes
-            midi_notes = 12 * (torch.log2(freqs / 440.0)) + 69
-            
-            # Map MIDI notes to chroma bins (0-11)
-            chroma_indices = torch.round(midi_notes).long() % 12
-            
-            # Populate the filter bank
-            for j in range(magnitude_spectrogram.shape[0]):
-                if freqs[j] > 0: # Avoid log(0)
-                    chroma_filter_bank[chroma_indices[j], j] = 1.0
+    waveform = _to_mono_numpy(audio_data)
+    if waveform.size == 0:
+        raise ValueError("audio_data must be non-empty.")
 
-    # Apply the filter bank
-    chroma_features = torch.matmul(chroma_filter_bank, magnitude_spectrogram)
-
-    # Normalize chroma features (e.g., L1 normalization)
-    chroma_features = torch.nn.functional.normalize(chroma_features, p=1, dim=0)
-
-    return chroma_features
+    chroma_np = librosa.feature.chroma_stft(
+        y=waveform,
+        sr=int(sample_rate),
+        n_fft=int(n_fft),
+        hop_length=int(hop_length),
+        n_chroma=int(n_chroma),
+        tuning=0.0,
+    )
+    return torch.from_numpy(chroma_np.astype(np.float32, copy=False)).to(device=device)
