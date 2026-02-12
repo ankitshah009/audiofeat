@@ -9,7 +9,10 @@ import torchaudio
 
 from ..pitch.f0 import fundamental_frequency_yin
 from ..pitch.strength import pitch_strength
+from ..spectral.bandwidth import spectral_bandwidth
 from ..spectral.centroid import spectral_centroid
+from ..spectral.flatness import spectral_flatness
+from ..spectral.flux import spectral_flux
 from ..spectral.mfcc import mfcc
 from ..spectral.rolloff import spectral_rolloff
 from ..stats.functionals import compute_functionals
@@ -109,42 +112,77 @@ def extract_core_features(
     *,
     frame_length: int = DEFAULT_FRAME_LENGTH,
     hop_length: int = DEFAULT_HOP_LENGTH,
+    device: str | torch.device | None = None,
 ) -> dict[str, float]:
-    """Extract a compact, production-friendly feature summary."""
-    waveform = waveform.flatten().float()
+    """Extract a compact, production-friendly feature summary.
 
-    rms_series = rms(waveform, frame_length=frame_length, hop_length=hop_length)
-    zcr_series = zero_crossing_rate(waveform, frame_length=frame_length, hop_length=hop_length)
-    centroid_series = spectral_centroid(
-        waveform,
-        frame_length=frame_length,
-        hop_length=hop_length,
-        sample_rate=sample_rate,
-    )
-    rolloff_series = spectral_rolloff(
-        waveform,
-        frame_length=frame_length,
-        hop_length=hop_length,
-        sample_rate=sample_rate,
-    )
-    f0_yin = fundamental_frequency_yin(
-        waveform,
-        fs=sample_rate,
-        frame_length=frame_length,
-        hop_length=hop_length,
-    )
-    strength_series = pitch_strength(
-        waveform,
-        fs=sample_rate,
-        frame_length=frame_length,
-        hop_length=hop_length,
-    )
-    mfcc_matrix = mfcc(
-        waveform,
-        sample_rate,
-        n_fft=frame_length,
-        hop_length=hop_length,
-    )
+    When *device* is provided (e.g. ``"cuda"``), the waveform is moved to that
+    device before computation, enabling GPU-accelerated extraction.
+    """
+    waveform = waveform.flatten().float()
+    if device is not None:
+        waveform = waveform.to(device)
+
+    with torch.no_grad():
+        # -- Temporal features --
+        rms_series = rms(waveform, frame_length=frame_length, hop_length=hop_length)
+        zcr_series = zero_crossing_rate(waveform, frame_length=frame_length, hop_length=hop_length)
+
+        # -- Spectral features --
+        centroid_series = spectral_centroid(
+            waveform,
+            frame_length=frame_length,
+            hop_length=hop_length,
+            sample_rate=sample_rate,
+        )
+        rolloff_series = spectral_rolloff(
+            waveform,
+            frame_length=frame_length,
+            hop_length=hop_length,
+            sample_rate=sample_rate,
+        )
+        _short_input = waveform.numel() < frame_length
+        if not _short_input:
+            bandwidth_series = spectral_bandwidth(
+                waveform,
+                sample_rate=sample_rate,
+                n_fft=frame_length,
+                hop_length=hop_length,
+            )
+            flux_series = spectral_flux(
+                waveform,
+                frame_length=frame_length,
+                hop_length=hop_length,
+            )
+            flatness_series = spectral_flatness(
+                waveform,
+                frame_length=frame_length,
+                hop_length=hop_length,
+            )
+        else:
+            bandwidth_series = flux_series = flatness_series = None
+
+        # -- Pitch features --
+        f0_yin = fundamental_frequency_yin(
+            waveform,
+            fs=sample_rate,
+            frame_length=frame_length,
+            hop_length=hop_length,
+        )
+        strength_series = pitch_strength(
+            waveform,
+            fs=sample_rate,
+            frame_length=frame_length,
+            hop_length=hop_length,
+        )
+
+        # -- Cepstral features --
+        mfcc_matrix = mfcc(
+            waveform,
+            sample_rate,
+            n_fft=frame_length,
+            hop_length=hop_length,
+        )
 
     features: dict[str, float] = {
         "sample_rate": int(sample_rate),
@@ -156,6 +194,12 @@ def extract_core_features(
     features.update(summarize_series("zcr", zcr_series))
     features.update(summarize_series("spectral_centroid", centroid_series))
     features.update(summarize_series("spectral_rolloff", rolloff_series))
+    if bandwidth_series is not None:
+        features.update(summarize_series("spectral_bandwidth", bandwidth_series))
+    if flux_series is not None:
+        features.update(summarize_series("spectral_flux", flux_series))
+    if flatness_series is not None:
+        features.update(summarize_series("spectral_flatness", flatness_series))
     features.update(summarize_series("pitch_strength", strength_series))
 
     voiced = f0_yin[f0_yin > 0]
@@ -177,6 +221,7 @@ def extract_features_from_file(
     sample_rate: int = DEFAULT_SAMPLE_RATE,
     frame_length: int = DEFAULT_FRAME_LENGTH,
     hop_length: int = DEFAULT_HOP_LENGTH,
+    device: str | torch.device | None = None,
 ) -> dict[str, float | str]:
     waveform, sr = load_audio(audio_path, target_sample_rate=sample_rate)
     features = extract_core_features(
@@ -184,6 +229,7 @@ def extract_features_from_file(
         sr,
         frame_length=frame_length,
         hop_length=hop_length,
+        device=device,
     )
     features["path"] = str(audio_path)
     return features
@@ -207,6 +253,7 @@ def extract_features_for_directory(
     sample_rate: int = DEFAULT_SAMPLE_RATE,
     frame_length: int = DEFAULT_FRAME_LENGTH,
     hop_length: int = DEFAULT_HOP_LENGTH,
+    device: str | torch.device | None = None,
     skip_errors: bool = True,
     errors: list[str] | None = None,
 ) -> list[dict[str, float | str]]:
@@ -219,6 +266,7 @@ def extract_features_for_directory(
                     sample_rate=sample_rate,
                     frame_length=frame_length,
                     hop_length=hop_length,
+                    device=device,
                 )
             )
         except Exception as exc:

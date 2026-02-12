@@ -73,7 +73,7 @@ def shimmer_dda(amplitudes: torch.Tensor) -> torch.Tensor:
     if amplitudes.shape[-1] < 3:
         return torch.tensor(0.0, device=amplitudes.device)
         
-    diff1 = torch.abs(amplitudes[1:] - amplitudes[:-1])
+    diff1 = amplitudes[1:] - amplitudes[:-1]
     diff2 = torch.abs(diff1[1:] - diff1[:-1])
     
     numerator = diff2.mean()

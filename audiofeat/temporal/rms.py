@@ -24,11 +24,12 @@ def hann_window(L: int):
     return 0.5 * (1 - torch.cos(2 * torch.pi * n / (L - 1)))
 
 def rms(x: torch.Tensor, frame_length: int, hop_length: int):
-    """Root-mean-square amplitude per frame."""
+    """Root-mean-square amplitude per frame with window-energy normalization."""
     frames = frame_signal(x, frame_length, hop_length)
     w = hann_window(frame_length).to(x.device)
     win_frames = frames * w
-    return torch.sqrt(torch.mean(win_frames ** 2, dim=1))
+    win_energy = torch.sum(w ** 2)
+    return torch.sqrt(torch.sum(win_frames ** 2, dim=1) / win_energy)
 
 def short_time_energy(x: torch.Tensor, frame_length: int, hop_length: int):
     """

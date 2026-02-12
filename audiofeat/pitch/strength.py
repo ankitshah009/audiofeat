@@ -21,8 +21,9 @@ def pitch_strength(x: torch.Tensor, fs: int, frame_length: int, hop_length: int,
     w = hann_window(frame_length).to(x.device)
     win = frames * w
     
-    # Compute autocorrelation
-    autocorr = torch.fft.irfft(torch.fft.rfft(win, n=2*frame_length), n=2*frame_length)
+    # Compute autocorrelation via Wiener-Khinchin theorem
+    spec = torch.fft.rfft(win, n=2 * frame_length)
+    autocorr = torch.fft.irfft(spec * torch.conj(spec), n=2 * frame_length)
     
     min_lag = int(fs / fmax)
     max_lag = int(fs / fmin)

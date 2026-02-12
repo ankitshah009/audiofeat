@@ -29,9 +29,10 @@ def harmonic_differences(magnitudes: torch.Tensor, f0_hz: float, fs: int, h_indi
 
     harmonic_amplitudes = torch.stack(harmonic_amplitudes)
 
-    # Calculate differences (e.g., H1-H2, H1-A3)
+    # Calculate differences in dB (e.g., H1-H2, H1-A3)
+    harmonic_db = 20 * torch.log10(harmonic_amplitudes + 1e-8)
     differences = []
     for i in range(len(h_indices) - 1):
-        differences.append(harmonic_amplitudes[i] - harmonic_amplitudes[i+1])
+        differences.append(harmonic_db[i] - harmonic_db[i + 1])
 
     return torch.stack(differences) if differences else torch.tensor([])

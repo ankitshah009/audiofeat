@@ -14,16 +14,15 @@ def spectral_slope(x: torch.Tensor, n_fft: int):
         torch.Tensor: The spectral slope.
     """
     X = torch.fft.rfft(x * hann_window(x.numel()).to(x.device), n=n_fft)
-    P = X.abs() ** 2
-    freqs = torch.linspace(0, n_fft // 2, P.numel(), device=x.device)
+    log_mag = torch.log(X.abs() + 1e-8)
+    freqs = torch.linspace(0, n_fft // 2, log_mag.numel(), device=x.device)
 
-    # Linear regression to find the slope
-    # y = P, x = freqs
+    # Linear regression of log-magnitude against frequency
     # slope = (N * sum(xy) - sum(x) * sum(y)) / (N * sum(x^2) - (sum(x))^2)
-    N = P.numel()
-    sum_xy = torch.sum(freqs * P)
+    N = log_mag.numel()
+    sum_xy = torch.sum(freqs * log_mag)
     sum_x = torch.sum(freqs)
-    sum_y = torch.sum(P)
+    sum_y = torch.sum(log_mag)
     sum_x2 = torch.sum(freqs ** 2)
 
     numerator = N * sum_xy - sum_x * sum_y

@@ -119,7 +119,7 @@ def run_gold_standard_scorecard(
     # 1) RMS theoretical sanity on a constant signal.
     ones = torch.ones(sample_rate, dtype=torch.float32)
     measured_rms = float(rms(ones, frame_length=frame_length, hop_length=hop_length).mean().item())
-    expected_rms = float(torch.sqrt((hann_window(frame_length) ** 2).mean()).item())
+    expected_rms = 1.0  # constant signal of ones: sqrt(sum(w^2 * 1^2) / sum(w^2)) = 1
     rms_rel_err = _relative_error(measured_rms, expected_rms)
     checks.append(
         _check_result(

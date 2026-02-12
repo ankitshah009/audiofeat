@@ -16,7 +16,9 @@ DEFAULT_COMPONENTS: tuple[str, ...] = (
     "audiofeat.stats",
     "audiofeat.io",
     "audiofeat.validation",
-    "audiofeat.standards",
+    "audiofeat.preprocessing",
+    "audiofeat.rhythm",
+    "audiofeat.segmentation",
 )
 
 

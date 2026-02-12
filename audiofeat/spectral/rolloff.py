@@ -28,8 +28,9 @@ def spectral_rolloff(
 
     frames = frame_signal(audio_data, frame_length, hop_length)
     magnitude_spectrum = torch.abs(torch.fft.rfft(frames))
-    total_energy = torch.sum(magnitude_spectrum, dim=1)
-    cumulative_energy = torch.cumsum(magnitude_spectrum, dim=1)
+    power_spectrum = magnitude_spectrum ** 2
+    total_energy = torch.sum(power_spectrum, dim=1)
+    cumulative_energy = torch.cumsum(power_spectrum, dim=1)
     
     # Find the frequency bin where the cumulative energy exceeds the rolloff_percent
     # We need to handle cases where total_energy is zero to avoid NaN in threshold
