@@ -29,7 +29,11 @@ _amplitude_modulation_depth = audiofeat.amplitude_modulation_depth(audio_data, w
 _breath_group_duration = audiofeat.breath_group_duration(audio_data, fs=sample_rate)
 _speech_rate = audiofeat.speech_rate(audio_data, fs=sample_rate)
 _log_attack_time = audiofeat.log_attack_time(audio_data, sample_rate)
-_temporal_centroid = audiofeat.temporal_centroid(audio_data, frame_length=2048, hop_length=512)
+# Global MPEG-7 temporal centroid (in seconds); the framewise contour is separate.
+_temporal_centroid = audiofeat.temporal_centroid(audio_data, sample_rate)
+_temporal_centroid_framewise = audiofeat.temporal_centroid_framewise(
+    audio_data, frame_length=2048, hop_length=512
+)
 _entropy_of_energy = audiofeat.entropy_of_energy(audio_data, frame_length=2048, hop_length=512)
 
 # Pitch features
@@ -42,20 +46,23 @@ pitch_strength = audiofeat.pitch_strength(audio_data, fs=sample_rate, frame_leng
 _alpha_ratio = audiofeat.alpha_ratio(audio_data, sample_rate)
 _hammarberg_index = audiofeat.hammarberg_index(audio_data, sample_rate)
 _harmonic_differences = audiofeat.harmonic_differences(torch.randn(1025), f0_hz=100.0, fs=sample_rate)
-# jitter = audiofeat.jitter(torch.randn(10))
-# shimmer = audiofeat.shimmer(torch.randn(10))
-# subharmonic_to_harmonic_ratio = audiofeat.subharmonic_to_harmonic_ratio(torch.randn(10), f0_bin=5, num_harmonics=3)
-# normalized_amplitude_quotient = audiofeat.normalized_amplitude_quotient(torch.randn(1), torch.randn(1), torch.randn(1))
-# closed_quotient = audiofeat.closed_quotient(torch.randn(1), torch.randn(1), torch.randn(1))
-# glottal_closure_time = audiofeat.glottal_closure_time(torch.randn(10), torch.randn(10), torch.randn(10))
-# soft_phonation_index = audiofeat.soft_phonation_index(torch.randn(1), torch.randn(1))
-# speed_quotient = audiofeat.speed_quotient(torch.randn(10), torch.randn(10))
-# vocal_fry_index = audiofeat.vocal_fry_index(torch.randn(10))
-# voice_onset_time = audiofeat.voice_onset_time(audio_data, fs=sample_rate, frame_length=2048, hop_length=512)
-# glottal_to_noise_excitation = audiofeat.glottal_to_noise_excitation(torch.randn(6, 10))
-# vocal_tract_length = audiofeat.vocal_tract_length(1000, 2000)
-# maximum_flow_declination_rate = audiofeat.maximum_flow_declination_rate(torch.randn(10), fs=sample_rate)
-# nasality_index = audiofeat.nasality_index(torch.randn(100), torch.randn(100), fs=sample_rate)
+# Jitter takes a sequence of glottal PERIODS (seconds); shimmer takes a sequence
+# of per-cycle AMPLITUDES -- not a raw waveform. Derive periods from the F0
+# contour and use the frame RMS as an amplitude proxy.
+_voiced_f0 = f0_yin[f0_yin > 0]
+_periods = (1.0 / _voiced_f0) if _voiced_f0.numel() > 1 else torch.linspace(0.009, 0.011, 20)
+_amplitudes = rms
+_jitter = audiofeat.jitter(_periods)                 # local jitter (%)
+_jitter_rap = audiofeat.jitter_rap(_periods)          # 3-point RAP (eGeMAPS)
+_shimmer = audiofeat.shimmer(_amplitudes)            # local shimmer (%)
+_shimmer_apq5 = audiofeat.shimmer_apq5(_amplitudes)  # 5-point APQ
+_vocal_fry_index = audiofeat.vocal_fry_index(f0_yin)
+_voice_onset_time = audiofeat.voice_onset_time(
+    audio_data, fs=sample_rate, frame_length=2048, hop_length=512
+)
+_vocal_tract_length = audiofeat.vocal_tract_length(500.0, 1500.0)  # F1, F2 in Hz
+# HNR estimated directly from a waveform frame via Boersma autocorrelation (dB).
+_hnr_acf = audiofeat.harmonic_to_noise_ratio_acf(audio_data[:4096], sample_rate)
 
 # Spectral features (additional)
 harmonic_richness_factor = audiofeat.harmonic_richness_factor(torch.randn(10))
@@ -86,8 +93,10 @@ delta_deltas = audiofeat.delta_delta(mfccs)
 chroma_features = audiofeat.chroma(audio_data, sample_rate)
 tonnetz_features = audiofeat.tonnetz(chroma_features)
 
-# Apply functionals to a feature series (e.g., RMS)
-rms_functionals = audiofeat.compute_functionals(rms.unsqueeze(1)) # Unsqueeze to make it (time_frames, 1)
+# Apply functionals to a feature series (e.g., RMS). compute_functionals expects a
+# 2-D tensor and returns a flat tensor [mean, std, min, max, skew, kurt] per feature.
+# Here we reduce a single (1, time) contour over the time axis (time_axis=1).
+rms_functionals = audiofeat.compute_functionals(rms.unsqueeze(0), time_axis=1)
 
 # Rhythm features
 estimated_tempo = audiofeat.tempo(audio_data, sample_rate)
@@ -116,7 +125,8 @@ print("Amplitude Modulation Depth:", _amplitude_modulation_depth)
 print("Breath Group Duration:", _breath_group_duration)
 print("Speech Rate:", _speech_rate)
 print("Log Attack Time:", _log_attack_time)
-print("Temporal Centroid:", _temporal_centroid[:5])
+print("Temporal Centroid (seconds):", _temporal_centroid)
+print("Temporal Centroid (framewise):", _temporal_centroid_framewise[:5])
 print("Entropy of Energy:", _entropy_of_energy[:5])
 print("F0 Autocorrelation:", f0_autocorr[:5])
 print("F0 YIN:", f0_yin[:5])
@@ -144,6 +154,14 @@ print("Tonnetz Features shape:", tonnetz_features.shape)
 print("Alpha Ratio:", _alpha_ratio)
 print("Hammarberg Index:", _hammarberg_index)
 print("Harmonic Differences:", _harmonic_differences)
-print("RMS Functionals:", rms_functionals)
+print("Jitter (local, %):", float(_jitter))
+print("Jitter (RAP, %):", float(_jitter_rap))
+print("Shimmer (local, %):", float(_shimmer))
+print("Shimmer (APQ5, %):", float(_shimmer_apq5))
+print("Vocal Fry Index:", float(_vocal_fry_index))
+print("Voice Onset Time:", _voice_onset_time)
+print("Vocal Tract Length (cm):", _vocal_tract_length)
+print("HNR (ACF, dB):", float(_hnr_acf))
+print("RMS Functionals [mean,std,min,max,skew,kurt]:", rms_functionals)
 print("Estimated Tempo (BPM):", estimated_tempo)
 print("Beat Times (seconds):", beat_times[:5])

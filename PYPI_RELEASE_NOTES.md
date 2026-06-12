@@ -1,104 +1,61 @@
-# AudioFeat v1.0.0 - PyPI Release Notes
+# audiofeat — Release Notes
 
-## 🎉 Package Successfully Published to PyPI!
+A comprehensive PyTorch-based audio feature extraction library for speech
+research, music analysis, and audio ML pipelines.
 
-**Package URL**: https://pypi.org/project/audiofeat/1.0.0/
+- **PyPI:** https://pypi.org/project/audiofeat/
+- **Full changelog:** see [CHANGELOG.md](CHANGELOG.md)
 
 ## Installation
 
-Users can now install `audiofeat` directly from PyPI:
-
 ```bash
-pip install audiofeat
+pip install audiofeat            # core DSP features (numpy, scipy, torch, torchaudio)
+pip install "audiofeat[io]"      # + audio file loading (soundfile, torchcodec)
+pip install "audiofeat[full]"    # + examples, validation, standards, all ML backends
 ```
 
-## Package Details
+`torchaudio >= 2.1` ships without a default audio decoder, so loading `.wav`/etc.
+files requires the `io` extra. Heavy pretrained-model backends (`asr`, `vad`,
+`diarization`, `embeddings`, `ssl`, `scene`, `separation`, `denoise`, ...) are
+feature-scoped extras and are imported lazily — `import audiofeat` never pulls
+them in.
 
-- **Package Name**: `audiofeat`
-- **Version**: 1.0.0
-- **Author**: Ankit Shah
-- **Email**: ankit.tronix@gmail.com
-- **License**: MIT
-- **Python Support**: >=3.8
+## 1.2.0 (current)
 
-## What's Included
+API-consistency and accuracy release. Highlights:
 
-This comprehensive PyTorch-based audio feature extraction library includes:
+- `from audiofeat import *` works; 131 public names are exported.
+- New functions: `jitter_rap`, `shimmer_apq5`, `shimmer_apq11`,
+  `harmonic_to_noise_ratio_acf`, `temporal_centroid_framewise`,
+  `beat_track_with_tempo`.
+- Energy-fallback VAD, a soundfile-based audio I/O fallback, a `py.typed` marker,
+  and feature-scoped optional dependencies.
+- DSP corrections for librosa/Praat-grade accuracy: `spectral_rolloff`
+  (magnitude-based), `spectral_flatness` (power-based), `spectral_crest_factor`
+  (`max/mean`), YIN parabolic interpolation, `voice_onset_time`, CPP power
+  cepstrum, `vocal_tract_length` quarter-wave, LSP extraction, LPCC sign, and
+  full-frame `alpha_ratio` / `hammarberg_index` / `nasality_index`.
+- Every README and `examples/` snippet now runs as written.
 
-### 🎵 Feature Categories
-- **Temporal Features**: RMS, ZCR, Energy, Attack Time, Decay Time, etc.
-- **Spectral Features**: Centroid, Rolloff, Flux, Flatness, Entropy, MFCCs, etc.
-- **Pitch Features**: F0 estimation (autocorrelation & YIN), semitone conversion
-- **Voice Features**: Jitter, Shimmer, HNR, Alpha ratio, etc.
-- **Cepstral Features**: LPCC, GTCC, Delta coefficients
-- **Statistical Features**: Mean, std, min, max, skewness, kurtosis
+> **Breaking (numeric):** several features now return different, *correct* values
+> (notably `temporal_centroid`, which is now MPEG-7 seconds, and `beat_track`,
+> which now returns beat times). Re-baseline downstream pipelines. The complete
+> list is in [CHANGELOG.md](CHANGELOG.md).
 
-### 🛠 Technical Highlights
-- **PyTorch-native implementation** for GPU acceleration
-- **Comprehensive feature set** - most extensive public audio library
-- **Modern packaging** with pyproject.toml
-- **Well-documented** with extensive README
-- **Production-ready** with proper error handling
+## Feature categories
 
-## Changes Made for PyPI Release
+Temporal, spectral, spectrograms/transforms, formants, linear prediction,
+cepstral, pitch, voice quality, rhythm, and statistical functionals. Browse the
+full, code-aligned catalog with `audiofeat list-features` or in
+[docs/FEATURE_CATALOG.md](docs/FEATURE_CATALOG.md).
 
-### 1. ✅ Modern Packaging Configuration
-- Created comprehensive `pyproject.toml` with all metadata
-- Updated `setup.py` with enhanced package information
-- Added proper `MANIFEST.in` for file inclusion
-- Implemented version management with `_version.py`
+## Citation
 
-### 2. ✅ Enhanced Package Metadata
-- Updated author email to ankit.tronix@gmail.com as requested
-- Added rich description optimized for discoverability
-- Included comprehensive keywords and classifiers
-- Added project URLs for documentation and issues
-
-### 3. ✅ Professional Documentation
-- Updated README with PyPI installation instructions
-- Added optional dependencies for dev and examples
-- Enhanced package description for better appeal
-
-### 4. ✅ Quality Assurance
-- All packages validated with `twine check`
-- Modern SPDX license format (MIT)
-- Proper Python version constraints (>=3.8)
-- Comprehensive dependency specifications
-
-## SEO & Discoverability Optimizations
-
-The package is optimized for high download numbers with:
-
-- **Strategic keywords**: audio, feature-extraction, pytorch, machine-learning, speech, voice, mfcc, spectral-features, dsp
-- **Comprehensive classifiers**: Targeting developers, researchers, AI/ML audience
-- **Professional description**: Emphasizes comprehensiveness and PyTorch integration
-- **Clear use cases**: Machine learning, research, audio analysis
-
-## Next Steps for Maximum Downloads
-
-1. **Documentation**: Consider creating detailed documentation site
-2. **Examples**: Expand example notebooks for common use cases
-3. **Tutorials**: Create blog posts/tutorials showing practical applications
-4. **Community**: Engage with audio/ML communities on social media
-5. **Integration**: Write about integration with popular ML frameworks
-6. **Performance**: Benchmark against other audio libraries
-7. **Citation**: Encourage academic citations for research use
-
-## File Structure
+```bibtex
+@phdthesis{shah2024computational,
+  title={Computational Audition with Imprecise Labels},
+  author={Shah, Ankit Parag},
+  year={2024},
+  school={Carnegie Mellon University Pittsburgh, PA}
+}
 ```
-audiofeat/
-├── pyproject.toml          # Modern packaging configuration
-├── setup.py                # Enhanced setup script
-├── MANIFEST.in             # File inclusion rules
-├── README.md               # Updated with PyPI install
-├── LICENSE.md              # MIT license
-├── audiofeat/
-│   ├── __init__.py         # Package initialization
-│   ├── _version.py         # Version management
-│   └── [feature modules]   # All audio feature implementations
-└── dist/                   # Distribution files
-    ├── audiofeat-1.0.0-py3-none-any.whl
-    └── audiofeat-1.0.0.tar.gz
-```
-
-🚀 **The package is now live and ready for users to discover and download!**

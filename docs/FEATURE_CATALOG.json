@@ -1,13 +1,13 @@
 {
   "summary": {
-    "ok": 9,
-    "total_components": 9,
-    "total_features": 121
+    "ok": 11,
+    "total_components": 11,
+    "total_features": 139
   },
   "components": {
     "audiofeat.temporal": {
       "status": "ok",
-      "feature_count": 22,
+      "feature_count": 24,
       "features": [
         {
           "name": "amplitude_modulation_depth",
@@ -18,56 +18,62 @@
         {
           "name": "log_attack_time",
           "module": "audiofeat.temporal.attack",
-          "signature": "(audio_data: torch.Tensor, sample_rate: int, threshold: float = 0.01)",
-          "description": "Computes the log attack time of an audio signal"
+          "signature": "(audio_data: 'torch.Tensor', sample_rate: 'int', low_threshold: 'float' = 0.1, high_threshold: 'float' = 0.9, window_ms: 'float' = 5.0) -> 'float'",
+          "description": "Compute log-attack-time of an audio signal"
         },
         {
           "name": "beat_track",
           "module": "audiofeat.temporal.beat",
-          "signature": "(waveform: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_length: int = 512, tempo_min: float = 60.0, tempo_max: float = 240.0) -> tuple[torch.Tensor, torch.Tensor]",
-          "description": "Performs beat tracking on an audio waveform to estimate tempo and beat times"
+          "signature": "(waveform: 'torch.Tensor', sample_rate: 'int', n_fft: 'int' = 2048, hop_length: 'int' = 512, tempo_min: 'float' = 60.0, tempo_max: 'float' = 240.0) -> 'tuple[torch.Tensor, torch.Tensor]'",
+          "description": "Beat tracking with librosa parity when available"
+        },
+        {
+          "name": "beat_track_with_tempo",
+          "module": "audiofeat.temporal.beat",
+          "signature": "(waveform: 'torch.Tensor', sample_rate: 'int', n_fft: 'int' = 2048, hop_length: 'int' = 512, tempo_min: 'float' = 60.0, tempo_max: 'float' = 240.0) -> 'tuple[torch.Tensor, torch.Tensor]'",
+          "description": "Beat tracking with librosa parity when available"
         },
         {
           "name": "temporal_centroid",
           "module": "audiofeat.temporal.centroid",
           "signature": "(waveform: torch.Tensor, sample_rate: int) -> torch.Tensor",
-          "description": "Computes the temporal centroid of an audio waveform"
+          "description": "Compute the MPEG-7 temporal centroid of an audio waveform"
         },
         {
           "name": "decay_time",
           "module": "audiofeat.temporal.decay",
-          "signature": "(x: torch.Tensor, sample_rate: int, threshold_db: float = -20.0) -> torch.Tensor",
+          "signature": "(x: torch.Tensor, sample_rate: int, threshold_db: float = -20.0, window_ms: float = 5.0) -> torch.Tensor",
           "description": "Compute *decay time* of an audio signal"
         },
         {
           "name": "energy",
           "module": "audiofeat.temporal.energy",
           "signature": "(signal: torch.Tensor, sample_rate: int, window_size: float = 0.05, hop_size: float = 0.025)",
-          "description": "Calculates the short-term energy of an audio signal"
+          "description": "Calculates the short-term (windowed) energy of an audio signal"
         },
         {
           "name": "entropy_of_energy",
           "module": "audiofeat.temporal.energy_entropy",
           "signature": "(audio_data: torch.Tensor, frame_length: int, hop_length: int, n_sub_frames: int = 10)",
-          "description": "Computes the entropy of energy of an audio signal"
+          "description": "Computes the (Shannon) entropy of energy of an audio signal"
         },
         {
           "name": "loudness",
           "module": "audiofeat.temporal.loudness",
           "signature": "(waveform: torch.Tensor, sample_rate: int) -> torch.Tensor",
-          "description": "Computes the perceived loudness of an audio waveform"
+          "description": "Compute integrated loudness in LUFS (ITU-R BS.1770 / EBU R 128)"
         },
         {
           "name": "onset_detect",
           "module": "audiofeat.temporal.onset",
-          "signature": "(waveform: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_length: int = 512, backtrack: bool = True) -> torch.Tensor",
-          "description": "Computes an onset detection function (ODF) and optionally backtracks to find precise onset times"
+          "signature": "(waveform: 'torch.Tensor', sample_rate: 'int', n_fft: 'int' = 2048, hop_length: 'int' = 512, backtrack: 'bool' = True) -> 'torch.Tensor'",
+          "description": "Detect onset times, matching librosa onset behavior when available"
         },
         {
           "name": "breath_group_duration",
           "module": "audiofeat.temporal.rhythm",
           "signature": "(env: torch.Tensor, fs: int)",
-          "description": "Estimate breath group durations from envelope"
+          "description": "Estimate breath-group durations from an amplitude envelope"
         },
         {
           "name": "speech_rate",
@@ -79,19 +85,25 @@
           "name": "temporal_centroid",
           "module": "audiofeat.temporal.rhythm",
           "signature": "(audio_data: torch.Tensor, frame_length: int, hop_length: int)",
-          "description": "Computes the temporal centroid of an audio signal"
+          "description": "Computes the per-frame temporal centroid of an audio signal"
+        },
+        {
+          "name": "temporal_centroid_framewise",
+          "module": "audiofeat.temporal.rhythm",
+          "signature": "(audio_data: torch.Tensor, frame_length: int, hop_length: int)",
+          "description": "Computes the per-frame temporal centroid of an audio signal"
         },
         {
           "name": "beat_track",
           "module": "audiofeat.temporal.rhythm_features",
-          "signature": "(audio_data: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_length: int = 512)",
-          "description": "Performs simple beat tracking on an audio signal"
+          "signature": "(audio_data: 'torch.Tensor', sample_rate: 'int', n_fft: 'int' = 2048, hop_length: 'int' = 512) -> 'torch.Tensor'",
+          "description": "Return beat times in seconds"
         },
         {
           "name": "tempo",
           "module": "audiofeat.temporal.rhythm_features",
-          "signature": "(audio_data: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_length: int = 512)",
-          "description": "Estimates the tempo (BPM) of an audio signal"
+          "signature": "(audio_data: 'torch.Tensor', sample_rate: 'int', n_fft: 'int' = 2048, hop_length: 'int' = 512) -> 'float'",
+          "description": "Estimate tempo in BPM using the shared beat tracker backend"
         },
         {
           "name": "frame_signal",
@@ -108,7 +120,7 @@
         {
           "name": "rms",
           "module": "audiofeat.temporal.rms",
-          "signature": "(x: torch.Tensor, frame_length: int, hop_length: int)",
+          "signature": "(x: torch.Tensor, frame_length: int, hop_length: int, window: str = 'hann')",
           "description": "Root-mean-square amplitude per frame"
         },
         {
@@ -126,8 +138,8 @@
         {
           "name": "tristimulus",
           "module": "audiofeat.temporal.tristimulus",
-          "signature": "(waveform: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_length: int = 512) -> torch.Tensor",
-          "description": "Computes the tristimulus of an audio waveform"
+          "signature": "(waveform: 'torch.Tensor', sample_rate: 'int', n_fft: 'int' = 2048, hop_length: 'int' = 512, n_harmonics: 'int' = 10) -> 'torch.Tensor'",
+          "description": "Compute tristimulus values (T1, T2, T3) from harmonic amplitudes"
         },
         {
           "name": "zero_crossing_count",
@@ -146,7 +158,7 @@
     },
     "audiofeat.spectral": {
       "status": "ok",
-      "feature_count": 39,
+      "feature_count": 40,
       "features": [
         {
           "name": "spectral_bandwidth",
@@ -163,20 +175,20 @@
         {
           "name": "chroma",
           "module": "audiofeat.spectral.chroma",
-          "signature": "(audio_data: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_length: int = 512, n_chroma: int = 12)",
-          "description": "Computes the Chroma features of an audio signal"
+          "signature": "(audio_data: 'torch.Tensor', sample_rate: 'int', n_fft: 'int' = 2048, hop_length: 'int' = 512, n_chroma: 'int' = 12) -> 'torch.Tensor'",
+          "description": "Compute chroma features, matching ``librosa.feature.chroma_stft``"
         },
         {
           "name": "spectral_contrast",
           "module": "audiofeat.spectral.contrast",
-          "signature": "(x: torch.Tensor, fs: int, n_fft: int = 2048, n_bands: int = 6)",
-          "description": "Computes the spectral contrast of an audio signal"
+          "signature": "(x: 'torch.Tensor', fs: 'int', n_fft: 'int' = 2048, n_bands: 'int' = 6, hop_length: 'int' = 512, quantile: 'float' = 0.02, fmin: 'float' = 200.0) -> 'torch.Tensor'",
+          "description": "Compute spectral contrast, matching librosa when available"
         },
         {
           "name": "cqt",
           "module": "audiofeat.spectral.cqt",
-          "signature": "(waveform: torch.Tensor, sample_rate: int, hop_length: int = 512, f_min: float = 32.7, n_bins: int = 84, bins_per_octave: int = 12) -> torch.Tensor",
-          "description": "Computes the Constant-Q Transform (CQT) of an audio waveform"
+          "signature": "(waveform: 'torch.Tensor', sample_rate: 'int', hop_length: 'int' = 512, f_min: 'float' = 32.7, n_bins: 'int' = 84, bins_per_octave: 'int' = 12) -> 'torch.Tensor'",
+          "description": "Compute CQT magnitude spectrogram, aligned with librosa when available"
         },
         {
           "name": "spectral_crest_factor",
@@ -194,7 +206,7 @@
           "name": "low_high_energy_ratio",
           "module": "audiofeat.spectral.energy_ratio",
           "signature": "(x: torch.Tensor, fs: int, n_fft: int = 1024)",
-          "description": "Ratio of energy below 1 kHz to that above 3 kHz"
+          "description": "Ratio of energy below 1 kHz to that above 3 kHz, in dB"
         },
         {
           "name": "spectral_entropy",
@@ -205,7 +217,7 @@
         {
           "name": "spectral_flatness",
           "module": "audiofeat.spectral.flatness",
-          "signature": "(audio_data: torch.Tensor, frame_length=2048, hop_length=512)",
+          "signature": "(audio_data: torch.Tensor, frame_length: int = 2048, hop_length: int = 512, power: float = 2.0, amin: float = 1e-10)",
           "description": "Computes the spectral flatness of an audio signal"
         },
         {
@@ -223,7 +235,7 @@
         {
           "name": "formant_contours",
           "module": "audiofeat.spectral.formants",
-          "signature": "(x: 'torch.Tensor', fs: 'int', order: 'int | None' = 10, num_formants: 'int' = 5, max_formant: 'float' = 5500.0, frame_length_ms: 'float' = 25.0, hop_length_ms: 'float | None' = None, pre_emphasis: 'float' = 0.97, max_bandwidth: 'float' = 700.0, method: 'str' = 'burg') -> 'tuple[torch.Tensor, torch.Tensor]'",
+          "signature": "(x: 'torch.Tensor', fs: 'int', order: 'int | None' = None, num_formants: 'int' = 5, max_formant: 'float' = 5500.0, frame_length_ms: 'float' = 25.0, hop_length_ms: 'float | None' = None, pre_emphasis: 'float' = 50.0, max_bandwidth: 'float' = 700.0, method: 'str' = 'burg') -> 'tuple[torch.Tensor, torch.Tensor]'",
           "description": "Extract time-varying formant contours"
         },
         {
@@ -235,14 +247,14 @@
         {
           "name": "formant_frequencies",
           "module": "audiofeat.spectral.formants",
-          "signature": "(x: 'torch.Tensor', fs: 'int', order: 'int | None' = 10, num_formants: 'int' = 5, max_formant: 'float' = 5500.0, frame_length_ms: 'float' = 25.0, hop_length_ms: 'float | None' = None, pre_emphasis: 'float' = 0.97, max_bandwidth: 'float' = 700.0, method: 'str' = 'burg')",
+          "signature": "(x: 'torch.Tensor', fs: 'int', order: 'int | None' = None, num_formants: 'int' = 5, max_formant: 'float' = 5500.0, frame_length_ms: 'float' = 25.0, hop_length_ms: 'float | None' = None, pre_emphasis: 'float' = 50.0, max_bandwidth: 'float' = 700.0, method: 'str' = 'burg')",
           "description": "Estimate median formant frequencies [F1, F2, ..., Fn]"
         },
         {
           "name": "gfcc",
           "module": "audiofeat.spectral.gfcc",
-          "signature": "(waveform: torch.Tensor, sample_rate: int, n_gfcc: int = 40, n_fft: int = 2048, hop_length: int = 512, n_bands: int = 128) -> torch.Tensor",
-          "description": "Computes Gammatone Frequency Cepstral Coefficients (GFCCs) of an audio waveform"
+          "signature": "(waveform: 'torch.Tensor', sample_rate: 'int', n_gfcc: 'int' = 40, n_fft: 'int' = 2048, hop_length: 'int' = 512, n_bands: 'int' = 128, fmin: 'float' = 50.0, fmax: 'float | None' = None) -> 'torch.Tensor'",
+          "description": "Compute GFCCs using an ERB/gammatone-style filterbank pipeline"
         },
         {
           "name": "harmonic_richness_factor",
@@ -260,12 +272,18 @@
           "name": "harmonic_to_noise_ratio",
           "module": "audiofeat.spectral.hnr",
           "signature": "(harmonic_energy: torch.Tensor, noise_energy: torch.Tensor)",
-          "description": "Computes the Harmonic-to-Noise Ratio (HNR)"
+          "description": "Energy-ratio helper: ``10 * log10(harmonic_energy / noise_energy)`` in dB"
+        },
+        {
+          "name": "harmonic_to_noise_ratio_acf",
+          "module": "audiofeat.spectral.hnr",
+          "signature": "(signal: torch.Tensor, sample_rate: int, fmin: float = 75.0, fmax: float = 500.0) -> torch.Tensor",
+          "description": "Estimate the Harmonic-to-Noise Ratio (HNR) of a frame via autocorrelation"
         },
         {
           "name": "hps",
           "module": "audiofeat.spectral.hps",
-          "signature": "(waveform: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_length: int = 512, margin_h: float = 3.0, margin_p: float = 3.0) -> tuple[torch.Tensor, torch.Tensor]",
+          "signature": "(waveform: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_length: int = 512, margin_h: float = 3.0, margin_p: float = 3.0, kernel_size_h: int | None = None, kernel_size_p: int | None = None) -> tuple[torch.Tensor, torch.Tensor]",
           "description": "Performs Harmonic-Percussive Separation (HPS) on an audio waveform"
         },
         {
@@ -277,8 +295,8 @@
         {
           "name": "key_detect",
           "module": "audiofeat.spectral.key",
-          "signature": "(waveform: torch.Tensor, sample_rate: int, n_fft: int = 4096, hop_length: int = 2048, n_chroma: int = 12) -> str",
-          "description": "Detects the musical key of an audio waveform"
+          "signature": "(waveform: 'torch.Tensor', sample_rate: 'int', n_fft: 'int' = 4096, hop_length: 'int' = 2048, n_chroma: 'int' = 12) -> 'str'",
+          "description": "Detect key using Krumhansl-Schmuckler template matching on chroma features"
         },
         {
           "name": "log_mel_spectrogram",
@@ -301,19 +319,19 @@
         {
           "name": "mfcc",
           "module": "audiofeat.spectral.mfcc",
-          "signature": "(audio_data: torch.Tensor, sample_rate: int, n_mfcc: int = 40, n_fft: int = 2048, hop_length: int = 512, n_mels: int = 128)",
+          "signature": "(audio_data: torch.Tensor, sample_rate: int, n_mfcc: int = 40, n_fft: int = 2048, hop_length: int = 512, n_mels: int = 128, mel_scale: str = 'htk', log_mels: bool = False)",
           "description": "Computes the Mel-Frequency Cepstral Coefficients (MFCCs) of an audio signal"
         },
         {
           "name": "spectral_skewness",
           "module": "audiofeat.spectral.moments",
           "signature": "(x: torch.Tensor, n_fft: int)",
-          "description": "No description available."
+          "description": "Spectral skewness and (excess) kurtosis of a frame"
         },
         {
           "name": "spectral_spread",
           "module": "audiofeat.spectral.moments",
-          "signature": "(x: torch.Tensor, n_fft: int, sample_rate: int)",
+          "signature": "(x: torch.Tensor, n_fft: int, sample_rate: int, power: float = 2.0)",
           "description": "Computes the spectral spread (bandwidth) of an audio signal"
         },
         {
@@ -325,7 +343,7 @@
         {
           "name": "spectral_rolloff",
           "module": "audiofeat.spectral.rolloff",
-          "signature": "(audio_data: torch.Tensor, frame_length: int = 2048, hop_length: int = 512, rolloff_percent: float = 0.85, sample_rate: int = 22050)",
+          "signature": "(audio_data: torch.Tensor, frame_length: int = 2048, hop_length: int = 512, rolloff_percent: float = 0.85, sample_rate: int = 22050, power: float = 1.0)",
           "description": "Computes the spectral rolloff of an audio signal"
         },
         {
@@ -349,25 +367,25 @@
         {
           "name": "spectral_slope",
           "module": "audiofeat.spectral.slope",
-          "signature": "(x: torch.Tensor, n_fft: int)",
+          "signature": "(x: torch.Tensor, n_fft: int, sample_rate: int = 22050)",
           "description": "Computes the spectral slope of an audio signal"
         },
         {
           "name": "cqt_spectrogram",
           "module": "audiofeat.spectral.spectrogram",
-          "signature": "(audio_data: torch.Tensor, sample_rate: int, hop_length: int = 512, fmin: float = 32.7, n_bins: int = 84, bins_per_octave: int = 12)",
+          "signature": "(audio_data: 'torch.Tensor', sample_rate: 'int', hop_length: 'int' = 512, fmin: 'float' = 32.7, n_bins: 'int' = 84, bins_per_octave: 'int' = 12)",
           "description": "Computes the Constant-Q Transform (CQT) spectrogram of an audio signal"
         },
         {
           "name": "linear_spectrogram",
           "module": "audiofeat.spectral.spectrogram",
-          "signature": "(audio_data: torch.Tensor, n_fft: int = 2048, hop_length: int = 512)",
+          "signature": "(audio_data: 'torch.Tensor', n_fft: 'int' = 2048, hop_length: 'int' = 512)",
           "description": "Computes the linear spectrogram (STFT) of an audio signal"
         },
         {
           "name": "mel_spectrogram",
           "module": "audiofeat.spectral.spectrogram",
-          "signature": "(audio_data: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_length: int = 512, n_mels: int = 128)",
+          "signature": "(audio_data: 'torch.Tensor', sample_rate: 'int', n_fft: 'int' = 2048, hop_length: 'int' = 512, n_mels: 'int' = 128)",
           "description": "Computes the Mel spectrogram of an audio signal"
         },
         {
@@ -379,15 +397,15 @@
         {
           "name": "tonnetz",
           "module": "audiofeat.spectral.tonnetz",
-          "signature": "(chroma_features: torch.Tensor)",
-          "description": "Computes the Tonnetz (Tonal Centroid Features) from Chroma features"
+          "signature": "(chroma_features: 'torch.Tensor')",
+          "description": "Compute tonal centroid (Tonnetz), matching librosa when available"
         }
       ],
       "errors": []
     },
     "audiofeat.pitch": {
       "status": "ok",
-      "feature_count": 6,
+      "feature_count": 9,
       "features": [
         {
           "name": "predict_crepe",
@@ -406,6 +424,24 @@
           "module": "audiofeat.pitch.f0",
           "signature": "(x: torch.Tensor, fs: int, frame_length: int, hop_length: int, fmin: int = 50, fmax: int = 600, threshold: float = 0.1)",
           "description": "Estimate F0 per frame using the YIN algorithm"
+        },
+        {
+          "name": "fundamental_frequency_praat",
+          "module": "audiofeat.pitch.pitch_praat",
+          "signature": "(x: 'torch.Tensor', fs: 'int', *, pitch_floor: 'float' = 75.0, pitch_ceiling: 'float' = 600.0, time_step: 'float | None' = None, very_accurate: 'bool' = False, fill_unvoiced: 'float' = 0.0) -> 'torch.Tensor'",
+          "description": "Extract F0 using Praat's autocorrelation method via parselmouth"
+        },
+        {
+          "name": "fundamental_frequency_praat_cc",
+          "module": "audiofeat.pitch.pitch_praat",
+          "signature": "(x: 'torch.Tensor', fs: 'int', *, pitch_floor: 'float' = 75.0, pitch_ceiling: 'float' = 600.0, time_step: 'float | None' = None, very_accurate: 'bool' = False, fill_unvoiced: 'float' = 0.0) -> 'torch.Tensor'",
+          "description": "Extract F0 using Praat's cross-correlation method via parselmouth"
+        },
+        {
+          "name": "pitch_strength_praat",
+          "module": "audiofeat.pitch.pitch_praat",
+          "signature": "(x: 'torch.Tensor', fs: 'int', *, pitch_floor: 'float' = 75.0, pitch_ceiling: 'float' = 600.0, time_step: 'float | None' = None) -> 'torch.Tensor'",
+          "description": "Extract pitch strength (autocorrelation at F0 lag) using Praat"
         },
         {
           "name": "fundamental_frequency_pyin",
@@ -430,13 +466,13 @@
     },
     "audiofeat.voice": {
       "status": "ok",
-      "feature_count": 26,
+      "feature_count": 31,
       "features": [
         {
           "name": "alpha_ratio",
           "module": "audiofeat.voice.alpha_ratio",
-          "signature": "(x: torch.Tensor, fs: int, n_fft: int = 2048)",
-          "description": "Computes the Alpha Ratio: ratio of energy in 50-1000 Hz to 1000-5000 Hz"
+          "signature": "(x: torch.Tensor, fs: int, n_fft: int = 2048, frame_length_ms: float = 60.0, hop_length_ms: float = 20.0)",
+          "description": "Computes the Alpha Ratio: ratio of energy in 50-1000 Hz to 1000-5000 Hz (dB)"
         },
         {
           "name": "cepstral_peak_prominence",
@@ -454,7 +490,7 @@
           "name": "glottal_to_noise_excitation",
           "module": "audiofeat.voice.excitation",
           "signature": "(spec: torch.Tensor)",
-          "description": "Approximate GNE using band cross-correlations"
+          "description": "Approximate Glottal-to-Noise Excitation (GNE) from band envelopes"
         },
         {
           "name": "maximum_flow_declination_rate",
@@ -465,14 +501,14 @@
         {
           "name": "hammarberg_index",
           "module": "audiofeat.voice.hammarberg",
-          "signature": "(x: torch.Tensor, fs: int, n_fft: int = 2048)",
-          "description": "Computes the Hammarberg Index: ratio of highest energy peak in 0-2 kHz to 2-5 kHz"
+          "signature": "(x: torch.Tensor, fs: int, n_fft: int = 2048, frame_length_ms: float = 60.0, hop_length_ms: float = 20.0)",
+          "description": "Computes the Hammarberg Index: ratio of the highest energy peak in 0-2 kHz"
         },
         {
           "name": "harmonic_differences",
           "module": "audiofeat.voice.harmonic_diff",
-          "signature": "(magnitudes: torch.Tensor, f0_hz: float, fs: int, h_indices: list = None)",
-          "description": "Computes harmonic differences (e.g., H1-H2, H1-A3)"
+          "signature": "(magnitudes: torch.Tensor, f0_hz: float, fs: int, h_indices: list = None, search_bins: int = 3)",
+          "description": "Computes harmonic differences (e.g., H1-H2, H1-A3) in dB"
         },
         {
           "name": "jitter_ddp",
@@ -493,16 +529,34 @@
           "description": "Compute Jitter (PPQ5): Five-point Period Perturbation Quotient"
         },
         {
+          "name": "jitter_rap",
+          "module": "audiofeat.voice.jitter",
+          "signature": "(periods: torch.Tensor) -> torch.Tensor",
+          "description": "Compute Jitter (RAP): Relative Average Perturbation (3-point)"
+        },
+        {
           "name": "nasality_index",
           "module": "audiofeat.voice.nasality",
-          "signature": "(nasal: torch.Tensor, oral: torch.Tensor, fs: int, n_fft: int = 1024)",
-          "description": "Compute nasality index from nasal and oral microphone signals"
+          "signature": "(nasal: torch.Tensor, oral: torch.Tensor, fs: int, n_fft: int = 1024, frame_length_ms: float = 60.0, hop_length_ms: float = 20.0)",
+          "description": "Compute the nasalance score from nasal and oral microphone signals"
         },
         {
           "name": "voice_onset_time",
           "module": "audiofeat.voice.onset",
           "signature": "(x: torch.Tensor, fs: int, frame_length: int, hop_length: int)",
-          "description": "Simplified voice onset time estimation"
+          "description": "Simplified voice onset time (VOT) estimation"
+        },
+        {
+          "name": "hnr_praat",
+          "module": "audiofeat.voice.praat_voice",
+          "signature": "(x: 'torch.Tensor | str | Path', fs: 'int | None' = None, *, pitch_floor: 'float' = 75.0, time_step: 'float' = 0.01, silence_threshold: 'float' = 0.1, periods_per_window: 'float' = 1.0) -> 'float'",
+          "description": "Extract harmonics-to-noise ratio (HNR) using Praat's autocorrelation method"
+        },
+        {
+          "name": "jitter_shimmer_praat",
+          "module": "audiofeat.voice.praat_voice",
+          "signature": "(x: 'torch.Tensor | str | Path', fs: 'int | None' = None, *, pitch_floor: 'float' = 75.0, pitch_ceiling: 'float' = 600.0, period_floor: 'float' = 0.0001, period_ceiling: 'float' = 0.02, max_period_factor: 'float' = 1.3, max_amplitude_factor: 'float' = 1.6) -> 'dict[str, float]'",
+          "description": "Extract jitter and shimmer metrics using Praat's PointProcess analysis"
         },
         {
           "name": "closed_quotient",
@@ -520,7 +574,7 @@
           "name": "jitter",
           "module": "audiofeat.voice.quality",
           "signature": "(periods: torch.Tensor)",
-          "description": "Cycle-to-cycle F0 variation (local jitter)"
+          "description": "Cycle-to-cycle F0 variation (local jitter), in percent"
         },
         {
           "name": "normalized_amplitude_quotient",
@@ -532,13 +586,13 @@
           "name": "shimmer",
           "module": "audiofeat.voice.quality",
           "signature": "(amplitudes: torch.Tensor)",
-          "description": "Cycle-to-cycle amplitude variation (local shimmer)"
+          "description": "Cycle-to-cycle amplitude variation (local shimmer), in percent"
         },
         {
           "name": "soft_phonation_index",
           "module": "audiofeat.voice.quality",
           "signature": "(low_band_energy: torch.Tensor, high_band_energy: torch.Tensor)",
-          "description": "Soft phonation index from low/high band energies"
+          "description": "Soft phonation index (SPI) from low/high band energies"
         },
         {
           "name": "speed_quotient",
@@ -559,10 +613,22 @@
           "description": "Ratio of fry frames to voiced frames based on F0 and period variation"
         },
         {
+          "name": "shimmer_apq11",
+          "module": "audiofeat.voice.shimmer",
+          "signature": "(amplitudes: torch.Tensor) -> torch.Tensor",
+          "description": "Compute Shimmer (APQ11): Amplitude Perturbation Quotient (11-point)"
+        },
+        {
           "name": "shimmer_apq3",
           "module": "audiofeat.voice.shimmer",
           "signature": "(amplitudes: torch.Tensor) -> torch.Tensor",
           "description": "Compute Shimmer (APQ3): Amplitude Perturbation Quotient (3-point)"
+        },
+        {
+          "name": "shimmer_apq5",
+          "module": "audiofeat.voice.shimmer",
+          "signature": "(amplitudes: torch.Tensor) -> torch.Tensor",
+          "description": "Compute Shimmer (APQ5): Amplitude Perturbation Quotient (5-point)"
         },
         {
           "name": "shimmer_dda",
@@ -585,16 +651,46 @@
         {
           "name": "vocal_tract_length",
           "module": "audiofeat.voice.vocal_tract",
-          "signature": "(F1: float, F2: float, c: float = 34400)",
-          "description": "Estimate vocal tract length from first two formants"
+          "signature": "(F1: float, F2: float = None, c: float = 35000.0)",
+          "description": "Estimate vocal tract length (VTL) in centimetres"
         }
       ],
       "errors": []
     },
     "audiofeat.cepstral": {
       "status": "ok",
-      "feature_count": 4,
+      "feature_count": 9,
       "features": [
+        {
+          "name": "erb_cepstral_coefficients",
+          "module": "audiofeat.cepstral._erb",
+          "signature": "(waveform: 'torch.Tensor', sample_rate: 'int', n_coeffs: 'int', n_fft: 'int', hop_length: 'int', n_bands: 'int', fmin: 'float' = 50.0, fmax: 'float | None' = None, eps: 'float' = 1e-10) -> 'torch.Tensor'",
+          "description": "Compute gammatone cepstral coefficients (GFCC / GTCC)"
+        },
+        {
+          "name": "erb_to_hz",
+          "module": "audiofeat.cepstral._erb",
+          "signature": "(freq_erb: 'torch.Tensor') -> 'torch.Tensor'",
+          "description": "Convert ERB-rate back to Hz"
+        },
+        {
+          "name": "gammatone_filterbank",
+          "module": "audiofeat.cepstral._erb",
+          "signature": "(sample_rate: 'int', n_fft: 'int', n_bands: 'int', fmin: 'float' = 50.0, fmax: 'float | None' = None, order: 'int' = 4, device: 'torch.device | None' = None, dtype: 'torch.dtype' = torch.float32) -> 'torch.Tensor'",
+          "description": "Build a gammatone-style magnitude filterbank"
+        },
+        {
+          "name": "hz_to_erb",
+          "module": "audiofeat.cepstral._erb",
+          "signature": "(freq_hz: 'torch.Tensor') -> 'torch.Tensor'",
+          "description": "Convert Hz to ERB-rate (Glasberg & Moore 1990)"
+        },
+        {
+          "name": "to_mono_waveform",
+          "module": "audiofeat.cepstral._erb",
+          "signature": "(waveform: 'torch.Tensor') -> 'torch.Tensor'",
+          "description": "No description available."
+        },
         {
           "name": "delta",
           "module": "audiofeat.cepstral.deltas",
@@ -610,8 +706,8 @@
         {
           "name": "gtcc",
           "module": "audiofeat.cepstral.gtcc",
-          "signature": "(audio_data: torch.Tensor, sample_rate: int, n_gtcc: int = 20, n_fft: int = 2048, hop_length: int = 512, n_bands: int = 128)",
-          "description": "Computes the Gammatone Cepstral Coefficients (GTCCs) of an audio signal"
+          "signature": "(audio_data: 'torch.Tensor', sample_rate: 'int', n_gtcc: 'int' = 20, n_fft: 'int' = 2048, hop_length: 'int' = 512, n_bands: 'int' = 128, fmin: 'float' = 50.0, fmax: 'float | None' = None) -> 'torch.Tensor'",
+          "description": "Compute GTCCs using an ERB/gammatone-style filterbank pipeline"
         },
         {
           "name": "lpcc",
@@ -629,8 +725,8 @@
         {
           "name": "compute_functionals",
           "module": "audiofeat.stats.functionals",
-          "signature": "(feature_series: torch.Tensor)",
-          "description": "Computes a set of statistical functionals (mean, std, min, max, skewness, kurtosis)"
+          "signature": "(feature_series: torch.Tensor, time_axis: int = 0)",
+          "description": "Computes a set of statistical functionals (mean, std, min, max, skewness,"
         }
       ],
       "errors": []
@@ -642,25 +738,25 @@
         {
           "name": "extract_core_features",
           "module": "audiofeat.io.features",
-          "signature": "(waveform: 'torch.Tensor', sample_rate: 'int', *, frame_length: 'int' = 2048, hop_length: 'int' = 512) -> 'dict[str, float]'",
+          "signature": "(waveform: 'torch.Tensor', sample_rate: 'int', *, frame_length: 'int' = 2048, hop_length: 'int' = 512, device: 'str | torch.device | None' = None) -> 'dict[str, float]'",
           "description": "Extract a compact, production-friendly feature summary"
         },
         {
           "name": "extract_features_for_directory",
           "module": "audiofeat.io.features",
-          "signature": "(input_dir: 'str | Path', *, sample_rate: 'int' = 22050, frame_length: 'int' = 2048, hop_length: 'int' = 512, skip_errors: 'bool' = True, errors: 'list[str] | None' = None) -> 'list[dict[str, float | str]]'",
+          "signature": "(input_dir: 'str | Path', *, sample_rate: 'int' = 22050, frame_length: 'int' = 2048, hop_length: 'int' = 512, device: 'str | torch.device | None' = None, skip_errors: 'bool' = True, errors: 'list[str] | None' = None) -> 'list[dict[str, float | str]]'",
           "description": "No description available."
         },
         {
           "name": "extract_features_from_file",
           "module": "audiofeat.io.features",
-          "signature": "(audio_path: 'str | Path', *, sample_rate: 'int' = 22050, frame_length: 'int' = 2048, hop_length: 'int' = 512) -> 'dict[str, float | str]'",
+          "signature": "(audio_path: 'str | Path', *, sample_rate: 'int' = 22050, frame_length: 'int' = 2048, hop_length: 'int' = 512, device: 'str | torch.device | None' = None) -> 'dict[str, float | str]'",
           "description": "No description available."
         },
         {
           "name": "iter_audio_files",
           "module": "audiofeat.io.features",
-          "signature": "(input_dir: 'str | Path', *, extensions: 'Iterable[str]' = {'.mp3', '.wav', '.ogg', '.flac', '.m4a'}) -> 'list[Path]'",
+          "signature": "(input_dir: 'str | Path', *, extensions: 'Iterable[str]' = {'.mp3', '.m4a', '.wav', '.flac', '.ogg'}) -> 'list[Path]'",
           "description": "No description available."
         },
         {
@@ -769,27 +865,52 @@
       ],
       "errors": []
     },
-    "audiofeat.standards": {
+    "audiofeat.preprocessing": {
       "status": "ok",
-      "feature_count": 3,
+      "feature_count": 0,
+      "features": [],
+      "errors": []
+    },
+    "audiofeat.rhythm": {
+      "status": "ok",
+      "feature_count": 1,
       "features": [
         {
-          "name": "available_opensmile_feature_levels",
-          "module": "audiofeat.standards",
-          "signature": "() -> 'list[str]'",
-          "description": "Return available standard openSMILE feature levels"
+          "name": "beat_detection",
+          "module": "audiofeat.rhythm.beat",
+          "signature": "(signal: 'torch.Tensor', sample_rate: 'int', window_size: 'float' = 0.05, hop_size: 'float' = 0.025)",
+          "description": "Estimate BPM and confidence, aligned with librosa beat tracking where available"
+        }
+      ],
+      "errors": []
+    },
+    "audiofeat.segmentation": {
+      "status": "ok",
+      "feature_count": 4,
+      "features": [
+        {
+          "name": "kmeans",
+          "module": "audiofeat.segmentation.diarization",
+          "signature": "(X, n_clusters, max_iters=100, seed: int | None = 0, generator: torch._C.Generator | None = None)",
+          "description": "A simple, deterministic implementation of K-Means clustering using PyTorch"
         },
         {
-          "name": "available_opensmile_feature_sets",
-          "module": "audiofeat.standards",
-          "signature": "() -> 'list[str]'",
-          "description": "Return available standard openSMILE feature sets"
+          "name": "speaker_diarization",
+          "module": "audiofeat.segmentation.diarization",
+          "signature": "(signal: torch.Tensor, sample_rate: int, n_speakers: int, window_size: float = 0.05, hop_size: float = 0.025, seed: int | None = 0)",
+          "description": "Performs speaker diarization on an audio signal"
         },
         {
-          "name": "extract_opensmile_features",
-          "module": "audiofeat.standards",
-          "signature": "(audio: 'str | Path | torch.Tensor', *, sample_rate: 'int | None' = None, feature_set: 'OpenSmileFeatureSet' = 'eGeMAPSv02', feature_level: 'OpenSmileFeatureLevel' = 'Functionals', flatten: 'bool' = True)",
-          "description": "Extract standardized openSMILE descriptors (e.g., eGeMAPSv02 or ComParE_2016)"
+          "name": "silence_removal",
+          "module": "audiofeat.segmentation.silence",
+          "signature": "(signal: torch.Tensor, sample_rate: int, window_size: float = 0.05, hop_size: float = 0.025, threshold: float = 0.1)",
+          "description": "Removes silent segments from an audio signal based on short-term energy"
+        },
+        {
+          "name": "music_thumbnailing",
+          "module": "audiofeat.segmentation.thumbnailing",
+          "signature": "(signal: torch.Tensor, sample_rate: int, thumb_size: float = 10.0, window_size: float = 1.0, hop_size: float = 0.5)",
+          "description": "Detects the most representative (most-repeated) part of a music recording"
         }
       ],
       "errors": []
