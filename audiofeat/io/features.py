@@ -39,6 +39,58 @@ def _looks_like_text_placeholder(path: Path) -> bool:
     return any(raw.startswith(prefix) for prefix in prefixes)
 
 
+def _read_with_soundfile(path: Path) -> tuple[torch.Tensor, int]:
+    """Read audio via ``soundfile`` and return ``((channels, frames), sample_rate)``.
+
+    Raises ``ImportError`` if ``soundfile`` is not installed so callers can keep
+    trying other backends.
+    """
+    import soundfile as sf  # noqa: PLC0415 - imported lazily as an optional backend
+
+    # ``always_2d=True`` yields ``(frames, channels)``; transpose to torchaudio's
+    # ``(channels, frames)`` convention and keep float32 throughout.
+    data, sample_rate = sf.read(str(path), dtype="float32", always_2d=True)
+    waveform = torch.from_numpy(data).t().contiguous()
+    return waveform, int(sample_rate)
+
+
+def _load_waveform(path: Path) -> tuple[torch.Tensor, int]:
+    """Load raw audio trying each available backend in order.
+
+    Order: ``torchaudio.load`` first (preserving historical behavior), then a
+    ``soundfile`` fallback for environments where torchaudio's default decoder
+    (e.g. TorchCodec/ffmpeg on torchaudio >= 2.8) is unavailable.
+    """
+    errors: list[str] = []
+
+    try:
+        return torchaudio.load(str(path))
+    except Exception as exc:  # noqa: BLE001 - backend-specific; we fall back below
+        errors.append(f"torchaudio.load: {type(exc).__name__}: {exc}")
+
+    try:
+        return _read_with_soundfile(path)
+    except ImportError:
+        errors.append(
+            "soundfile: not installed (install with `pip install audiofeat[io]`)."
+        )
+    except Exception as exc:  # noqa: BLE001 - decode/format error from soundfile
+        errors.append(f"soundfile.read: {type(exc).__name__}: {exc}")
+
+    extra = ""
+    if path.exists() and _looks_like_text_placeholder(path):
+        extra = (
+            " The file appears to be a text placeholder (for example a 404 page "
+            "or a missing Git LFS object), not valid audio."
+        )
+    detail = "\n  - ".join(errors)
+    raise RuntimeError(
+        f"Failed to decode audio file '{path}'.{extra} No working audio backend "
+        "succeeded. Install one, e.g. `pip install audiofeat[io]` (soundfile) or "
+        f"`pip install torchcodec`.\nBackend attempts:\n  - {detail}"
+    )
+
+
 def to_mono(waveform: torch.Tensor) -> torch.Tensor:
     """Convert a loaded waveform to mono and return shape `(num_samples,)`."""
     if waveform.dim() == 1:
@@ -66,18 +118,16 @@ def load_audio(
     target_sample_rate: int | None = DEFAULT_SAMPLE_RATE,
     mono: bool = True,
 ) -> tuple[torch.Tensor, int]:
-    """Load audio from disk with optional mono conversion and resampling."""
+    """Load audio from disk with optional mono conversion and resampling.
+
+    Audio decoding is attempted via :func:`torchaudio.load` first and falls back
+    to ``soundfile`` when no torchaudio decoding backend is available (for
+    example, torchaudio >= 2.8 raises when TorchCodec/ffmpeg is missing). If no
+    backend can decode the file, a :class:`RuntimeError` explains how to install
+    one.
+    """
     path = Path(audio_path)
-    try:
-        waveform, sample_rate = torchaudio.load(str(path))
-    except Exception as exc:  # pragma: no cover - backend-specific errors
-        extra = ""
-        if path.exists() and _looks_like_text_placeholder(path):
-            extra = (
-                " The file appears to be a text placeholder (for example a 404 page "
-                "or a missing Git LFS object), not valid audio."
-            )
-        raise RuntimeError(f"Failed to decode audio file '{path}'.{extra}") from exc
+    waveform, sample_rate = _load_waveform(path)
 
     if mono:
         waveform = to_mono(waveform)
