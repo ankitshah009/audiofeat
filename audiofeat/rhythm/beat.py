@@ -5,6 +5,8 @@ import torch
 
 from ..temporal.beat import beat_track as _beat_track_frames
 
+__all__ = ["beat_detection"]
+
 
 def beat_detection(
     signal: torch.Tensor,

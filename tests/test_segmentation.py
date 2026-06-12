@@ -34,6 +34,8 @@ def test_music_thumbnailing():
     pattern = torch.sin(2 * torch.pi * 440 * t)
     signal = torch.cat([torch.randn(sample_rate*5), pattern, torch.randn(sample_rate*5), pattern, torch.randn(sample_rate*5)])
     start_time, end_time = music_thumbnailing(signal, sample_rate)
-    assert isinstance(start_time, torch.Tensor)
-    assert isinstance(end_time, torch.Tensor)
-    assert start_time.item() < end_time.item()
+    # The docstring promises floats (seconds); the function now returns plain
+    # floats instead of un-cast tensors from the start_frame * hop_size product.
+    assert isinstance(start_time, float)
+    assert isinstance(end_time, float)
+    assert start_time < end_time

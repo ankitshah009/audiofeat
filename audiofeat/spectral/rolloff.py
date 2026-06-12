@@ -1,6 +1,8 @@
 import torch
 from ..temporal.rms import frame_signal
 
+__all__ = ["spectral_rolloff"]
+
 
 def spectral_rolloff(
     audio_data: torch.Tensor,
@@ -8,6 +10,7 @@ def spectral_rolloff(
     hop_length: int = 512,
     rolloff_percent: float = 0.85,
     sample_rate: int = 22050,
+    power: float = 1.0,
 ):
     """
     Computes the spectral rolloff of an audio signal.
@@ -17,6 +20,11 @@ def spectral_rolloff(
         frame_length (int): The length of each frame in samples.
         hop_length (int): The number of samples to slide the window.
         rolloff_percent (float): The percentage of the total energy to capture (e.g., 0.85, 0.90, 0.95).
+        sample_rate (int): Sampling rate of the audio (Hz).
+        power (float): Exponent applied to the magnitude spectrum before
+            accumulation. ``1.0`` (default) cumulates the magnitude spectrum
+            and matches ``librosa.feature.spectral_rolloff``; ``2.0`` cumulates
+            the power spectrum.
 
     Returns:
         torch.Tensor: The spectral rolloff for each frame.
@@ -28,10 +36,13 @@ def spectral_rolloff(
 
     frames = frame_signal(audio_data, frame_length, hop_length)
     magnitude_spectrum = torch.abs(torch.fft.rfft(frames))
-    power_spectrum = magnitude_spectrum ** 2
-    total_energy = torch.sum(power_spectrum, dim=1)
-    cumulative_energy = torch.cumsum(power_spectrum, dim=1)
-    
+    # librosa.feature.spectral_rolloff cumulates the MAGNITUDE spectrum
+    # (power=1), not the power spectrum; ``power`` is exposed for callers that
+    # explicitly want power-based accumulation.
+    accum_spectrum = magnitude_spectrum if power == 1.0 else magnitude_spectrum ** power
+    total_energy = torch.sum(accum_spectrum, dim=1)
+    cumulative_energy = torch.cumsum(accum_spectrum, dim=1)
+
     # Find the frequency bin where the cumulative energy exceeds the rolloff_percent
     # We need to handle cases where total_energy is zero to avoid NaN in threshold
     threshold = rolloff_percent * total_energy.unsqueeze(1)

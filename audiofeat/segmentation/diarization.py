@@ -1,22 +1,42 @@
 import torch
-import torchaudio
 from ..spectral.mfcc import mfcc
 
-def kmeans(X, n_clusters, max_iters=100):
+__all__ = ["kmeans", "speaker_diarization"]
+
+
+def kmeans(X, n_clusters, max_iters=100, seed: int | None = 0, generator: torch.Generator | None = None):
     """
-    A simple implementation of K-Means clustering using PyTorch.
+    A simple, deterministic implementation of K-Means clustering using PyTorch.
 
     Args:
         X (torch.Tensor): The input data (n_samples, n_features).
         n_clusters (int): The number of clusters.
         max_iters (int, optional): The maximum number of iterations. Defaults to 100.
+        seed (int | None, optional): Seed used to build an internal
+            ``torch.Generator`` for centroid initialization and empty-cluster
+            reinitialization, ensuring reproducible results. Defaults to ``0``.
+            Ignored if ``generator`` is provided. Pass ``None`` to use the
+            global RNG (non-deterministic).
+        generator (torch.Generator | None, optional): Explicit RNG to use. If
+            given, takes precedence over ``seed``.
 
     Returns:
-        torch.Tensor: The cluster assignments for each data point.
+        torch.Tensor: The cluster assignments for each data point, computed from
+        the FINAL centroids.
     """
-    # Randomly initialize centroids
-    centroids = X[torch.randperm(X.size(0))[:n_clusters]]
+    if generator is None and seed is not None:
+        generator = torch.Generator(device=X.device)
+        generator.manual_seed(int(seed))
 
+    def _randperm(n):
+        if generator is not None:
+            return torch.randperm(n, generator=generator, device=X.device)
+        return torch.randperm(n, device=X.device)
+
+    # Randomly initialize centroids (deterministically when a generator is set).
+    centroids = X[_randperm(X.size(0))[:n_clusters]].clone()
+
+    labels = torch.zeros(X.size(0), dtype=torch.long, device=X.device)
     for _ in range(max_iters):
         # Assign each data point to the closest centroid
         dists = torch.cdist(X, centroids)
@@ -30,16 +50,23 @@ def kmeans(X, n_clusters, max_iters=100):
                 new_centroids[i] = cluster_points.mean(dim=0)
             else:
                 # Handle empty clusters by re-initializing the centroid
-                new_centroids[i] = X[torch.randperm(X.size(0))[:1]].squeeze(0)
+                new_centroids[i] = X[_randperm(X.size(0))[:1]].squeeze(0)
 
         # Check for convergence
         if torch.allclose(centroids, new_centroids):
+            centroids = new_centroids
             break
         centroids = new_centroids
 
+    # Recompute labels from the FINAL centroids so the returned assignment is
+    # consistent with the converged centroids (not a stale pre-update one).
+    dists = torch.cdist(X, centroids)
+    labels = torch.argmin(dists, dim=1)
+
     return labels
 
-def speaker_diarization(signal: torch.Tensor, sample_rate: int, n_speakers: int, window_size: float = 0.05, hop_size: float = 0.025):
+
+def speaker_diarization(signal: torch.Tensor, sample_rate: int, n_speakers: int, window_size: float = 0.05, hop_size: float = 0.025, seed: int | None = 0):
     """
     Performs speaker diarization on an audio signal.
 
@@ -49,6 +76,8 @@ def speaker_diarization(signal: torch.Tensor, sample_rate: int, n_speakers: int,
         n_speakers (int): The number of speakers.
         window_size (float, optional): The size of the analysis window in seconds. Defaults to 0.05.
         hop_size (float, optional): The hop size between consecutive windows in seconds. Defaults to 0.025.
+        seed (int | None, optional): Seed forwarded to :func:`kmeans` for
+            reproducible clustering. Defaults to ``0``.
 
     Returns:
         torch.Tensor: A tensor containing the speaker label for each segment.
@@ -80,7 +109,7 @@ def speaker_diarization(signal: torch.Tensor, sample_rate: int, n_speakers: int,
     # Transpose to (n_frames, n_mfcc) for k-means
     mfccs = mfccs.permute(1, 0)
 
-    # 2. Perform K-Means clustering
-    labels = kmeans(mfccs, n_speakers)
+    # 2. Perform K-Means clustering (deterministic via seed)
+    labels = kmeans(mfccs, n_speakers, seed=seed)
 
     return labels

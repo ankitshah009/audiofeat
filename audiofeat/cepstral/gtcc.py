@@ -4,6 +4,8 @@ import torch
 
 from ._erb import erb_cepstral_coefficients
 
+__all__ = ["gtcc"]
+
 
 def gtcc(
     audio_data: torch.Tensor,

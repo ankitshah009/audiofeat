@@ -1,5 +1,8 @@
 import torch
 
+__all__ = ["rms", "short_time_energy"]
+
+
 def frame_signal(x: torch.Tensor, frame_length: int, hop_length: int):
     """Frame a 1D signal into overlapping frames."""
     if frame_length <= 0:
@@ -23,9 +26,38 @@ def hann_window(L: int):
     n = torch.arange(L, dtype=torch.float32)
     return 0.5 * (1 - torch.cos(2 * torch.pi * n / (L - 1)))
 
-def rms(x: torch.Tensor, frame_length: int, hop_length: int):
-    """Root-mean-square amplitude per frame with window-energy normalization."""
+def rms(x: torch.Tensor, frame_length: int, hop_length: int, window: str = "hann"):
+    """Root-mean-square amplitude per frame.
+
+    Args:
+        x (torch.Tensor): The audio signal.
+        frame_length (int): The length of each frame in samples.
+        hop_length (int): The number of samples to slide the window.
+        window (str): Analysis window. ``"hann"`` (default) applies a Hann
+            window with window-energy normalization (the historical
+            behavior of this function). ``"rect"`` / ``"boxcar"`` / ``"none"``
+            use an unwindowed (rectangular) frame, i.e. plain
+            ``sqrt(mean(frame**2))``, which matches
+            ``librosa.feature.rms`` (with ``center=False``) for parity.
+
+    Returns:
+        torch.Tensor: RMS amplitude for each frame.
+
+    Notes:
+        librosa's ``rms`` uses a rectangular window and is the canonical
+        reference; pass ``window="rect"`` to reproduce it. The default
+        ``"hann"`` is retained for backward compatibility with existing
+        callers and serialized pipelines.
+    """
     frames = frame_signal(x, frame_length, hop_length)
+    win = window.lower()
+    if win in ("rect", "rectangular", "boxcar", "none"):
+        # Rectangular window: sqrt(mean(frame**2)) — matches librosa.
+        return torch.sqrt(torch.mean(frames ** 2, dim=1))
+    if win != "hann":
+        raise ValueError(
+            f"Unsupported window {window!r}; expected 'hann' or 'rect'/'boxcar'."
+        )
     w = hann_window(frame_length).to(x.device)
     win_frames = frames * w
     win_energy = torch.sum(w ** 2)

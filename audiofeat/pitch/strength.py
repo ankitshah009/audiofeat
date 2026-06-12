@@ -2,7 +2,7 @@
 import torch
 from ..temporal.rms import frame_signal, hann_window
 
-def pitch_strength(x: torch.Tensor, fs: int, frame_length: int, hop_length: int, fmin: int = 50, fmax: int = 600):
+def pitch_strength(x: torch.Tensor, fs: int, frame_length: int, hop_length: int, fmin: float = 50.0, fmax: float = 600.0):
     """
     Computes the pitch strength using the autocorrelation method.
 

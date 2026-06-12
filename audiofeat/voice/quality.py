@@ -1,20 +1,35 @@
 import torch
 from ..temporal.rms import frame_signal, hann_window
+from .jitter import jitter_local
+from .shimmer import shimmer_local
 
 def jitter(periods: torch.Tensor):
-    """Cycle-to-cycle F0 variation (local jitter)."""
-    diffs = torch.abs(periods[:-1] - periods[1:])
-    return diffs.mean() / periods.mean()
+    """Cycle-to-cycle F0 variation (local jitter), in percent.
+
+    Delegates to :func:`audiofeat.voice.jitter.jitter_local` so that this and the
+    canonical implementation agree (both return percent and guard ``N < 2``).
+    """
+    return jitter_local(periods)
 
 def shimmer(amplitudes: torch.Tensor):
-    """Cycle-to-cycle amplitude variation (local shimmer)."""
-    diffs = torch.abs(amplitudes[:-1] - amplitudes[1:])
-    return diffs.mean() / amplitudes.mean()
+    """Cycle-to-cycle amplitude variation (local shimmer), in percent.
+
+    Delegates to :func:`audiofeat.voice.shimmer.shimmer_local` so that this and the
+    canonical implementation agree (both return percent and guard ``N < 2``).
+    """
+    return shimmer_local(amplitudes)
 
 def subharmonic_to_harmonic_ratio(mag: torch.Tensor, f0_bin: int, num_harmonics: int):
-    """Compute SHR from magnitude spectrum."""
+    """Compute SHR from magnitude spectrum.
+
+    Indices are clamped to the valid range of ``mag`` so that harmonics or
+    subharmonics falling beyond the spectrum do not raise ``IndexError``.
+    """
+    n = mag.numel()
     harmonic_indices = torch.arange(1, num_harmonics + 1, device=mag.device) * f0_bin
     subharmonic_indices = harmonic_indices + f0_bin // 2
+    harmonic_indices = harmonic_indices.clamp(0, n - 1)
+    subharmonic_indices = subharmonic_indices.clamp(0, n - 1)
     harmonic_power = (mag[harmonic_indices] ** 2).sum()
     sub_power = (mag[subharmonic_indices] ** 2).sum()
     return 10 * torch.log10(sub_power / (harmonic_power + 1e-8))
@@ -32,8 +47,13 @@ def glottal_closure_time(open_times: torch.Tensor, close_times: torch.Tensor, pe
     return ((close_times - open_times) / periods).mean()
 
 def soft_phonation_index(low_band_energy: torch.Tensor, high_band_energy: torch.Tensor):
-    """Soft phonation index from low/high band energies."""
-    return 10 * torch.log10(high_band_energy / (low_band_energy + 1e-8))
+    """Soft phonation index (SPI) from low/high band energies.
+
+    SPI is the ratio of low-frequency to high-frequency harmonic energy
+    (in dB): ``10 * log10(low / high)``. A larger SPI indicates incomplete
+    glottal adduction (softer/breathier phonation).
+    """
+    return 10 * torch.log10((low_band_energy + 1e-8) / (high_band_energy + 1e-8))
 
 def speed_quotient(open_times: torch.Tensor, close_times: torch.Tensor):
     """Speed quotient from glottal flow opening and closing times."""

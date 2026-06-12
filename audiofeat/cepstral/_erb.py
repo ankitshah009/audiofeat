@@ -3,7 +3,12 @@
 Implements:
   1. Glasberg & Moore (1990) ERB-rate scale conversions.
   2. 4th-order gammatone magnitude-response filterbank.
-  3. Log-energy + DCT pipeline for GFCC / GTCC computation.
+  3. Log-energy + DCT pipeline.
+
+This module applies **log** compression to the band energies before the DCT,
+which is the GTCC convention. The same pipeline is reused by ``spectral.gfcc``
+(which labels its output GFCC); the only difference between the two is naming
+and the default number of bands/coefficients, not the compression.
 
 The gammatone impulse response is:
     g(t) = t^(n-1) exp(-2π b t) cos(2π f_c t),   n = 4
@@ -19,6 +24,14 @@ from __future__ import annotations
 
 import torch
 import torchaudio.functional as AF
+
+__all__ = [
+    "to_mono_waveform",
+    "hz_to_erb",
+    "erb_to_hz",
+    "gammatone_filterbank",
+    "erb_cepstral_coefficients",
+]
 
 
 def to_mono_waveform(waveform: torch.Tensor) -> torch.Tensor:
@@ -153,13 +166,25 @@ def erb_cepstral_coefficients(
     if n_coeffs <= 0 or n_bands <= 0:
         raise ValueError("n_coeffs and n_bands must be > 0.")
 
+    # The number of returned coefficients cannot exceed the number of filterbank
+    # bands (the DCT projects ``n_bands`` log-energies onto ``n_coeffs`` <= n_bands
+    # basis vectors); it is clamped silently here.
     n_coeffs = min(int(n_coeffs), int(n_bands))
 
-    window = torch.hann_window(int(n_fft), device=x.device, dtype=x.dtype)
+    n_fft = int(n_fft)
+    hop_length = int(hop_length)
+
+    # torch.stft defaults to center=True with reflect padding, which requires the
+    # signal to be longer than n_fft. Zero-pad short signals up to n_fft so that
+    # gfcc/gtcc do not crash on very short input.
+    if x.numel() < n_fft:
+        x = torch.nn.functional.pad(x, (0, n_fft - x.numel()))
+
+    window = torch.hann_window(n_fft, device=x.device, dtype=x.dtype)
     spec = torch.stft(
         x,
-        n_fft=int(n_fft),
-        hop_length=int(hop_length),
+        n_fft=n_fft,
+        hop_length=hop_length,
         window=window,
         return_complex=True,
     )

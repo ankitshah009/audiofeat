@@ -1,6 +1,9 @@
 import torch
-import torchaudio
 import torchaudio.transforms as T
+
+from .spectrogram import _to_mono_tensor
+
+__all__ = ["spectral_bandwidth"]
 
 def spectral_bandwidth(waveform: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_length: int = 512) -> torch.Tensor:
     """
@@ -31,10 +34,10 @@ def spectral_bandwidth(waveform: torch.Tensor, sample_rate: int, n_fft: int = 20
     This implementation uses torchaudio for spectrogram computation.
     Requires 'torch' and 'torchaudio' to be installed.
     """
-    if waveform.ndim > 1 and waveform.shape[0] > 1:
-        waveform = waveform[0]
-    elif waveform.ndim == 0:
-        raise ValueError("Input waveform cannot be a scalar.")
+    # Squeeze to a strictly 1-D mono signal so torchaudio returns a 2-D
+    # spectrogram (freq, time); a residual (1, N) input would yield a 3-D
+    # spectrogram and break the frequency-axis assumption below.
+    waveform = _to_mono_tensor(waveform)
 
     # Compute the STFT magnitude spectrogram
     spectrogram_transform = T.Spectrogram(

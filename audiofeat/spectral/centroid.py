@@ -2,6 +2,8 @@ import torch
 
 from ..temporal.rms import frame_signal
 
+__all__ = ["spectral_centroid"]
+
 
 def spectral_centroid(
     audio_data: torch.Tensor,

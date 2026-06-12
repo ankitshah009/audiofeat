@@ -2,13 +2,54 @@ import torch
 import torchaudio
 import torchaudio.transforms as T
 
+
+def _median_filter_1d_axis(mag: torch.Tensor, kernel_size: int, axis: int) -> torch.Tensor:
+    """
+    Sliding-window median filter along ``axis`` of a 2D tensor, using a
+    reflect-padded ``unfold`` (vectorised; no Python double loop).
+
+    The kernel is forced odd and clamped to the axis length, and the reflect
+    pad is clamped so it never exceeds ``size - 1`` (torch's reflect-pad limit)
+    for short signals.
+    """
+    size = mag.shape[axis]
+    k = int(kernel_size)
+    if k < 1:
+        k = 1
+    if k % 2 == 0:
+        k += 1
+    if k > size:
+        k = size if size % 2 == 1 else max(1, size - 1)
+    half = k // 2
+    # reflect padding requires pad < size; clamp for very short axes.
+    pad = min(half, max(0, size - 1))
+
+    work = mag if axis == 1 else mag.transpose(0, 1)  # filter along last dim
+    if pad > 0:
+        work = torch.nn.functional.pad(work, (pad, pad), mode="reflect")
+    # If clamping made the effective window shorter than k, shrink k to fit.
+    eff_k = min(k, work.shape[-1])
+    windows = work.unfold(dimension=-1, size=eff_k, step=1)
+    med = windows.median(dim=-1).values
+    # Crop back to original length (handles the clamped-pad case).
+    med = med[..., :size]
+    if med.shape[-1] < size:  # pathological tiny axis; pad-edge replicate
+        med = torch.nn.functional.pad(med, (0, size - med.shape[-1]), mode="replicate")
+    return med if axis == 1 else med.transpose(0, 1)
+
+
 def hps(waveform: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_length: int = 512,
-        margin_h: float = 3.0, margin_p: float = 3.0) -> tuple[torch.Tensor, torch.Tensor]:
+        margin_h: float = 3.0, margin_p: float = 3.0,
+        kernel_size_h: int | None = None, kernel_size_p: int | None = None) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Performs Harmonic-Percussive Separation (HPS) on an audio waveform.
 
-    Separates an audio signal into its harmonic and percussive components
-    using median filtering on the magnitude spectrogram.
+    Separates an audio signal into its harmonic and percussive components via
+    median filtering of the magnitude spectrogram (Fitzgerald, 2010). A median
+    filter along the **frequency** axis suppresses sharp harmonic peaks (giving
+    the percussive estimate's complement) while a median filter along the
+    **time** axis suppresses transients (giving the harmonic estimate); soft
+    Wiener-style masks are then derived from the two filtered spectra.
 
     Parameters
     ----------
@@ -21,83 +62,65 @@ def hps(waveform: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_length:
     hop_length : int
         Number of samples between successive frames.
     margin_h : float
-        Margin for harmonic median filter (frequency axis).
+        Legacy half-width control for the harmonic (time-axis) median filter.
+        Used only when ``kernel_size_h`` is None and ``margin_h`` differs from
+        its default; the kernel length is ``2*margin_h + 1``.
     margin_p : float
-        Margin for percussive median filter (time axis).
+        Legacy half-width control for the percussive (frequency-axis) median
+        filter. Used only when ``kernel_size_p`` is None and ``margin_p``
+        differs from its default; the kernel length is ``2*margin_p + 1``.
+    kernel_size_h : int, optional
+        Explicit (odd) kernel length for the harmonic median filter along the
+        time axis. Defaults to 31 (a sensible Fitzgerald/librosa value).
+    kernel_size_p : int, optional
+        Explicit (odd) kernel length for the percussive median filter along the
+        frequency axis. Defaults to 17.
 
     Returns
     -------
     tuple[torch.Tensor, torch.Tensor]
-        A tuple containing:
-        - harmonic_waveform (torch.Tensor): The separated harmonic component.
-        - percussive_waveform (torch.Tensor): The separated percussive component.
+        (harmonic_waveform, percussive_waveform).
 
     Notes
     -----
-    This implementation uses median filtering on the magnitude spectrogram.
-    The median filter is applied along the frequency axis for harmonic
-    components and along the time axis for percussive components.
-    Requires 'torch' and 'torchaudio' to be installed.
-    The median filtering is a basic, loop-based implementation for clarity
-    and to avoid complex `torch.nn.functional.unfold` patterns for 1D median
-    filtering without external dependencies.
+    Median filtering is vectorised with ``unfold`` + ``median`` (no Python
+    double loop). Reflect padding is clamped for short signals.
+    Requires 'torch' and 'torchaudio'.
     """
     if waveform.ndim > 1 and waveform.shape[0] > 1:
         waveform = waveform[0]
     elif waveform.ndim == 0:
         raise ValueError("Input waveform cannot be a scalar.")
+    waveform = waveform.flatten()
 
-    # Compute STFT
+    # Resolve kernel sizes. Honour explicit kernel_size_* first; otherwise fall
+    # back to a sensible default unless the caller overrode the legacy margin.
+    _DEFAULT_MARGIN = 3.0
+    if kernel_size_h is None:
+        kernel_size_h = 31 if margin_h == _DEFAULT_MARGIN else int(margin_h * 2 + 1)
+    if kernel_size_p is None:
+        kernel_size_p = 17 if margin_p == _DEFAULT_MARGIN else int(margin_p * 2 + 1)
+
+    # Compute STFT (power=None -> complex spectrogram)
     stft_transform = T.Spectrogram(
         n_fft=n_fft,
         hop_length=hop_length,
-        return_complex=True
+        power=None,
     )
     stft_matrix = stft_transform(waveform)
     magnitude_spectrogram = torch.abs(stft_matrix)
     phase_spectrogram = torch.angle(stft_matrix)
 
-    # Apply median filtering for harmonic and percussive masks
+    # Harmonic estimate: median filter along the TIME axis (axis=1).
+    harmonic_median = _median_filter_1d_axis(
+        magnitude_spectrogram, kernel_size_h, axis=1
+    )
+    # Percussive estimate: median filter along the FREQUENCY axis (axis=0).
+    percussive_median = _median_filter_1d_axis(
+        magnitude_spectrogram, kernel_size_p, axis=0
+    )
 
-    # Harmonic mask (median filter along frequency axis)
-    harmonic_mask = torch.zeros_like(magnitude_spectrogram)
-    for i in range(magnitude_spectrogram.shape[1]): # Iterate over time frames
-        kernel_size_h = int(margin_h * 2 + 1) # Odd kernel size
-        if kernel_size_h > magnitude_spectrogram.shape[0]:
-            kernel_size_h = magnitude_spectrogram.shape[0]
-        if kernel_size_h % 2 == 0: # Ensure odd
-            kernel_size_h += 1
-
-        padded_freq = torch.nn.functional.pad(
-            magnitude_spectrogram[:, i].unsqueeze(0).unsqueeze(0),
-            (kernel_size_h // 2, kernel_size_h // 2),
-            mode='reflect',
-        ).squeeze(0).squeeze(0)
-        for j in range(magnitude_spectrogram.shape[0]): # Iterate over frequency bins
-            window = padded_freq[j : j + kernel_size_h]
-            harmonic_mask[j, i] = torch.median(window)
-
-    # Percussive mask (median filter along time axis)
-    percussive_mask = torch.zeros_like(magnitude_spectrogram)
-    for i in range(magnitude_spectrogram.shape[0]): # Iterate over frequency bins
-        kernel_size_p = int(margin_p * 2 + 1) # Odd kernel size
-        if kernel_size_p > magnitude_spectrogram.shape[1]:
-            kernel_size_p = magnitude_spectrogram.shape[1]
-        if kernel_size_p % 2 == 0: # Ensure odd
-            kernel_size_p += 1
-
-        padded_time = torch.nn.functional.pad(
-            magnitude_spectrogram[i, :].unsqueeze(0).unsqueeze(0),
-            (kernel_size_p // 2, kernel_size_p // 2),
-            mode='reflect',
-        ).squeeze(0).squeeze(0)
-        for j in range(magnitude_spectrogram.shape[1]): # Iterate over time frames
-            window = padded_time[j : j + kernel_size_p]
-            percussive_mask[i, j] = torch.median(window)
-
-    # Soft masking (power law)
-    harmonic_median = harmonic_mask
-    percussive_median = percussive_mask
+    # Soft masking (Wiener / power law)
     denom = harmonic_median + percussive_median + 1e-8
     harmonic_mask = (harmonic_median / denom) ** 2
     percussive_mask = (percussive_median / denom) ** 2

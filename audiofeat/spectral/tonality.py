@@ -25,6 +25,8 @@ def spectral_tonality(
     """
     if x.dim() != 1:
         raise ValueError("`spectral_tonality` expects a mono 1-D signal.")
+    if x.numel() < 2:
+        return torch.tensor(0.0, device=x.device)
 
     windowed = x * hann_window(x.numel()).to(x.device)
     spectrum = torch.fft.rfft(windowed, n=n_fft)

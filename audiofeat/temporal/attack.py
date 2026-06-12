@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import torch
 
+__all__ = ["log_attack_time"]
+
 
 def _smooth_envelope(
     waveform: torch.Tensor,

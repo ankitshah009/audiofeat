@@ -3,6 +3,8 @@ from __future__ import annotations
 import numpy as np
 import torch
 
+__all__ = ["beat_track_with_tempo"]
+
 
 def _to_mono_tensor(waveform: torch.Tensor) -> torch.Tensor:
     if waveform.dim() == 1:
@@ -105,3 +107,12 @@ def beat_track(
     tempo_tensor = torch.tensor(tempo_val, dtype=torch.float32, device=device)
     beat_tensor = torch.from_numpy(np.asarray(beat_frames, dtype=np.int64)).to(device=device)
     return tempo_tensor, beat_tensor
+
+
+# Public alias for the rich beat tracker that returns ``(tempo, beat_frames)``.
+# ``beat_track`` (the implementation name) stays importable from this module
+# for internal callers (rhythm_features, rhythm.beat) and existing tests, but
+# only ``beat_track_with_tempo`` is exported via ``from .beat import *`` so it
+# does not collide with the beat-TIMES ``beat_track`` from rhythm_features.py
+# at the package level.
+beat_track_with_tempo = beat_track

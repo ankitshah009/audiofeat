@@ -1,6 +1,8 @@
 import torch
 from ..temporal.rms import hann_window
 
+__all__ = ["spectral_irregularity"]
+
 
 def spectral_irregularity(x: torch.Tensor, n_fft: int = 2048) -> torch.Tensor:
     r"""Compute Jensen's *spectral irregularity* of a signal.
@@ -25,6 +27,8 @@ def spectral_irregularity(x: torch.Tensor, n_fft: int = 2048) -> torch.Tensor:
     """
     if x.dim() != 1:
         raise ValueError("`spectral_irregularity` expects a mono signal (1-D tensor).")
+    if x.numel() < 2:
+        return torch.tensor(0.0, device=x.device)
 
     windowed = x * hann_window(x.numel()).to(x.device)
     spectrum = torch.fft.rfft(windowed, n=n_fft)

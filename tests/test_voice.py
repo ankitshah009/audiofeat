@@ -71,9 +71,11 @@ def test_delta_cpp():
     assert isinstance(result, torch.Tensor)
 
 def test_voice_onset_time():
+    # voice_onset_time now returns a torch.Tensor (NaN sentinel when undefined),
+    # per the corrected autocorrelation-based VOT implementation.
     audio_data = torch.randn(22050 * 2)
     result = voice_onset_time(audio_data, fs=22050, frame_length=2048, hop_length=512)
-    assert isinstance(result, float)
+    assert isinstance(result, torch.Tensor)
 
 def test_glottal_to_noise_excitation():
     spec = torch.randn(6, 10).abs()

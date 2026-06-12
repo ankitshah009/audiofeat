@@ -1,4 +1,6 @@
 from .centroid import *
+from .bandwidth import *
+from .log_mel_spectrogram import *
 from .rolloff import *
 from .flux import *
 from .flatness import *

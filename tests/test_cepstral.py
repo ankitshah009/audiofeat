@@ -36,13 +36,17 @@ def test_gtcc():
     assert result.shape[1] > 0
 
 def test_delta():
-    features = torch.randn(10, 5) # time_steps, features
+    # delta operates on the (features, time_steps) convention and now requires
+    # time_steps >= width (default 9). The prior shape (10, 5) put only 5 frames
+    # on the time axis, which is shorter than the default window and is now a
+    # documented ValueError; use enough frames instead.
+    features = torch.randn(5, 40)  # features, time_steps
     result = delta(features)
     assert isinstance(result, torch.Tensor)
     assert result.shape == features.shape
 
 def test_delta_delta():
-    features = torch.randn(10, 5) # time_steps, features
+    features = torch.randn(5, 40)  # features, time_steps (>= width)
     result = delta_delta(features)
     assert isinstance(result, torch.Tensor)
     assert result.shape == features.shape

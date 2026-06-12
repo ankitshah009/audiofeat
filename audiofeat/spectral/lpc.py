@@ -37,6 +37,13 @@ def lpc_coefficients(audio_frame: torch.Tensor, order: int):
     a[0] = 1.0
     E = R[0]
 
+    # Energy floor: a silent/constant frame has R[0] ~= 0, which would make the
+    # reflection coefficient k = ... / E divide by zero and produce NaNs. Bail
+    # out early and leave the remaining coefficients at their initialised 0.0.
+    energy_floor = 1e-12
+    if not torch.isfinite(E) or float(E) <= energy_floor:
+        return a[1:]
+
     for i in range(1, order + 1):
         k = 0.0
         for j in range(1, i):
@@ -53,5 +60,10 @@ def lpc_coefficients(audio_frame: torch.Tensor, order: int):
             a[i - j] = temp2 + k * temp1
 
         E *= (1 - k * k)
+
+        # If the residual energy collapses (perfectly predictable frame, e.g.
+        # constant signal), stop before the next division by ~0 produces NaNs.
+        if not torch.isfinite(E) or float(E) <= energy_floor:
+            break
 
     return a[1:] # Return a_1 to a_p

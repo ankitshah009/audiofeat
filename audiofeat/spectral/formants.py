@@ -437,7 +437,13 @@ def formant_frequencies(
 
 
 def formant_bandwidths(a: torch.Tensor, fs: int):
-    """Formant bandwidths from LPC polynomial roots."""
+    """Formant bandwidths from LPC polynomial roots.
+
+    The bandwidth of a pole at radius ``|r|`` is ``-(fs/pi) * ln|r|``. Only
+    finite, strictly-positive bandwidths are returned (poles on/outside the
+    unit circle, ``|r| >= 1``, give non-positive values and are discarded,
+    consistent with ``_roots_to_formants``).
+    """
     roots = np.roots(a.detach().cpu().numpy())
     roots = roots[roots.imag >= 0]
     freqs = np.angle(roots) * fs / (2 * np.pi)
@@ -445,7 +451,7 @@ def formant_bandwidths(a: torch.Tensor, fs: int):
         bandwidths = -fs * np.log(np.abs(roots)) / np.pi
     order = np.argsort(freqs)
     bandwidths = bandwidths[order]
-    bandwidths = bandwidths[np.isfinite(bandwidths)]
+    bandwidths = bandwidths[np.isfinite(bandwidths) & (bandwidths > 0.0)]
     return torch.from_numpy(bandwidths)
 
 

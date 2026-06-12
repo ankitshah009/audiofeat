@@ -4,6 +4,8 @@ import numpy as np
 import torch
 import torchaudio.transforms as T
 
+__all__ = ["onset_detect"]
+
 
 def _to_mono_tensor(waveform: torch.Tensor) -> torch.Tensor:
     if waveform.dim() == 1:

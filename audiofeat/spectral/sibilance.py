@@ -2,8 +2,14 @@
 import torch
 from ..temporal.rms import hann_window
 
+__all__ = ["sibilant_spectral_peak_frequency"]
+
+
 def sibilant_spectral_peak_frequency(x: torch.Tensor, fs: int, n_fft: int = 1024):
     """Peak frequency of sibilant energy between 3 and 12 kHz."""
+    if x.numel() < 2:
+        return torch.tensor(0.0, device=x.device, dtype=x.dtype)
+
     X = torch.fft.rfft(x * hann_window(x.numel()).to(x.device), n=n_fft)
     P = X.abs() ** 2
     freqs = torch.linspace(0, fs / 2, P.numel(), device=x.device)
