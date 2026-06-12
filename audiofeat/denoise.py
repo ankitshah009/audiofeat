@@ -8,9 +8,10 @@ def denoise_rnn(waveform: torch.Tensor, sample_rate: int = 48000):
     """Suppress noise using rnnoise-torch if installed."""
     try:
         from rnnoise_torch import RNNoise  # type: ignore
-    except ModuleNotFoundError as exc:
+    except ImportError as exc:
         raise ModuleNotFoundError(
-            "`rnnoise-torch` not installed. Install with `pip install rnnoise-torch`."
+            "`rnnoise-torch` is required for RNN denoising. "
+            "Install with `pip install audiofeat[denoise]`."
         ) from exc
 
     model = RNNoise()

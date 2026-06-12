@@ -9,11 +9,13 @@ from typing import Literal, Union
 
 
 def _lazy_load_model(model_size: str = "base"):
+    # ImportError caught broadly: whisper can fail to import (not just be absent)
+    # against incompatible numba/torch builds.
     try:
         import whisper  # type: ignore
-    except ModuleNotFoundError as exc:
+    except ImportError as exc:
         raise ModuleNotFoundError(
-            "`openai-whisper` is required. Install with `pip install audiofeat[models]`."
+            "`openai-whisper` is required. Install with `pip install audiofeat[asr]`."
         ) from exc
 
     return whisper.load_model(model_size)

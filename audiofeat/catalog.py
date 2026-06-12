@@ -107,8 +107,24 @@ def build_feature_catalog(
     return catalog
 
 
+def _escape_md_cell(text: str) -> str:
+    """Make ``text`` safe to embed inside a GitHub-Flavored-Markdown table cell.
+
+    Pipe characters (common in modern type hints such as ``int | None`` or
+    ``str | Path``) would otherwise be interpreted as column separators and
+    shift every following cell, corrupting the table. Newlines are collapsed to
+    spaces so a multi-line description cannot break out of its row.
+    """
+    return text.replace("\\", "\\\\").replace("|", "\\|").replace("\n", " ").replace("\r", " ")
+
+
 def catalog_to_markdown(catalog: dict[str, dict[str, object]]) -> str:
-    """Render a markdown table from `build_feature_catalog()` output."""
+    """Render a markdown table from `build_feature_catalog()` output.
+
+    All dynamic cells (signatures and descriptions) are escaped so that pipe
+    characters in union type hints (e.g. ``int | None``) and newlines do not
+    break the GitHub-Flavored-Markdown table layout.
+    """
     lines: list[str] = []
     lines.append("| Component | Function | Signature | Description |")
     lines.append("|---|---|---|---|")
@@ -119,9 +135,11 @@ def catalog_to_markdown(catalog: dict[str, dict[str, object]]) -> str:
             lines.append(f"| `{component}` | _none_ | - | status: `{status}` |")
             continue
         for item in features:
+            signature = _escape_md_cell(str(item["signature"]))
+            description = _escape_md_cell(str(item["description"]))
             lines.append(
                 "| "
-                f"`{component}` | `{item['name']}` | `{item['signature']}` | {item['description']} |"
+                f"`{component}` | `{item['name']}` | `{signature}` | {description} |"
             )
     return "\n".join(lines)
 
