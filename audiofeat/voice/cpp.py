@@ -42,12 +42,13 @@ def cepstral_peak_prominence(
     window = hann_window(frame_length).to(frames.device)
     windowed_frames = frames * window
 
-    # 2. Compute Real Cepstrum
-    # C[n] = Real(IFFT(log(|FFT(x)|)))
+    # 2. Compute the POWER Cepstrum
+    # C[n] = IFFT(log(|FFT(x)|^2)). Clinical CPP uses the power cepstrum and a
+    # 10*log10 (power-dB) scale, NOT the magnitude cepstrum / 20*log10.
     spectrum = torch.fft.rfft(windowed_frames, n=n_fft)
-    log_magnitude = torch.log(torch.abs(spectrum) + 1e-9)
-    cepstrum = torch.fft.irfft(log_magnitude, n=n_fft)
-    
+    log_power = torch.log(torch.abs(spectrum) ** 2 + 1e-9)
+    cepstrum = torch.fft.irfft(log_power, n=n_fft)
+
     # We only care about positive quefrency
     cepstrum = cepstrum[:, :n_fft//2]
     
@@ -98,35 +99,24 @@ def cepstral_peak_prominence(
     
     # Solve coeffs: Beta = Y * pinv^T  -> shape (Num_frames, 2) [intercept, slope]
     coeffs = torch.matmul(Y_mat, pinv.t())
-    
-    # 4. Find Peak in Valid F0 Range
-    # We search for max in [q_min, q_max]
-    search_region = cepstrum[:, q_min:q_max]
-    peaks, peak_indices_rel = torch.max(search_region, dim=1)
-    
-    # Absolute quefrency of peaks
-    peak_quefrencies = peak_indices_rel + q_min
-    
-    # 5. Compute Predicted Value at Peak Quefrency
-    # Predicted = intercept + slope * peak_q
-    intercepts = coeffs[:, 0]
-    slopes = coeffs[:, 1]
-    predicted_vals = intercepts + slopes * peak_quefrencies.float()
-    
-    # 6. Calculate CPP
-    # CPP = Peak_Value - Predicted_Value
-    # Factor is typically in dB if using log magnitude spectrum (which we are)
-    # Note: Initial log was natural log. Convert to dB (20*log10) if standard scale required.
-    # However, 'power cepstrum' vs 'real cepstrum' conventions vary. 
-    # Usually CPP is reported in dB.
-    # Our cepstrum is derived from ln(|X|). 
-    # To get roughly dB-like scale: 20 * log10(e) * value approx 8.68 * value
-    
-    cpp = (peaks - predicted_vals)
-    
-    # Convert to standard dB scale often used in clinical tools
-    cpp_db = cpp * 8.685889 
-    
+
+    # 4. Subtract the regression baseline from the cepstrum, THEN find the peak.
+    #    CPP is the prominence of the rahmonic peak *relative to* the regression
+    #    line, so the peak must be chosen on the subtracted curve (the raw-peak
+    #    location and the peak of the residual can differ).
+    intercepts = coeffs[:, 0:1]
+    slopes = coeffs[:, 1:2]
+    baseline = intercepts + slopes * quefrencies.unsqueeze(0)  # (frames, N)
+    residual = cepstrum - baseline
+
+    # 5. Find peak prominence in the valid F0 quefrency range [q_min, q_max].
+    search_region = residual[:, q_min:q_max]
+    cpp = torch.max(search_region, dim=1).values
+
+    # 6. Convert to power-dB. Cepstrum used natural log of POWER, so dB = 10*log10
+    #    scale => multiply by 10 * log10(e) = 4.342945.
+    cpp_db = cpp * 4.342945
+
     return cpp_db
 
 def delta_cpp(cpp: torch.Tensor):

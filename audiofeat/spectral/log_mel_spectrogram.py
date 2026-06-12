@@ -1,6 +1,9 @@
 import torch
-import torchaudio
 import torchaudio.transforms as T
+
+from .spectrogram import _to_mono_tensor
+
+__all__ = ["log_mel_spectrogram"]
 
 def log_mel_spectrogram(waveform: torch.Tensor, sample_rate: int, n_fft: int = 2048, hop_length: int = 512, n_mels: int = 128, f_min: float = 0.0, f_max: float = None) -> torch.Tensor:
     """
@@ -28,11 +31,9 @@ def log_mel_spectrogram(waveform: torch.Tensor, sample_rate: int, n_fft: int = 2
     torch.Tensor
         Log-Mel spectrogram.
     """
-    if waveform.ndim > 1 and waveform.shape[0] > 1:
-        # Assuming mono or taking the first channel if multi-channel
-        waveform = waveform[0]
-    elif waveform.ndim == 0:
-        raise ValueError("Input waveform cannot be a scalar.")
+    # Squeeze to a strictly 1-D mono signal so torchaudio returns a 2-D
+    # log-Mel spectrogram; a residual (1, N) input would yield a 3-D output.
+    waveform = _to_mono_tensor(waveform)
 
     if f_max is None:
         f_max = float(sample_rate / 2)

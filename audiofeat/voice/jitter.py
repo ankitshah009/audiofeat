@@ -24,6 +24,39 @@ def jitter_local(periods: torch.Tensor) -> torch.Tensor:
     jitt = diffs.mean() / mean_period * 100.0
     return jitt
 
+def jitter_rap(periods: torch.Tensor) -> torch.Tensor:
+    """
+    Compute Jitter (RAP): Relative Average Perturbation (3-point).
+
+    The average absolute difference between a period and the average of it and
+    its two nearest neighbours, divided by the average period. Required by the
+    eGeMAPS feature set.
+
+    Formula:
+        RAP = mean(|T_i - mean(T_{i-1}, T_i, T_{i+1})|) / mean(T) * 100
+    """
+    N = periods.shape[-1]
+    if N < 3:
+        return torch.tensor(0.0, device=periods.device)
+
+    kernel = torch.ones(3, device=periods.device) / 3.0
+    avg_3 = torch.nn.functional.conv1d(
+        periods.view(1, 1, -1),
+        kernel.view(1, 1, -1),
+        padding=0,
+    ).view(-1)
+
+    # conv output (length N-2) aligns with periods[1:-1]
+    center_periods = periods[1:-1]
+
+    numerator = torch.abs(center_periods - avg_3).mean()
+    mean_period = periods.mean()
+
+    if mean_period == 0:
+        return torch.tensor(0.0, device=periods.device)
+
+    return numerator / mean_period * 100.0
+
 def jitter_ppq5(periods: torch.Tensor) -> torch.Tensor:
     """
     Compute Jitter (PPQ5): Five-point Period Perturbation Quotient.

@@ -2,6 +2,8 @@ import torch
 import math
 from ..temporal.rms import hann_window
 
+__all__ = ["spectral_roughness"]
+
 
 def spectral_roughness(
     x: torch.Tensor,
@@ -40,6 +42,8 @@ def spectral_roughness(
     """
     if x.dim() != 1:
         raise ValueError("`spectral_roughness` expects a 1-D (mono) signal.")
+    if x.numel() < 2:
+        return torch.tensor(0.0, device=x.device)
 
     # Window the signal to reduce spectral leakage
     windowed = x * hann_window(x.numel()).to(x.device)

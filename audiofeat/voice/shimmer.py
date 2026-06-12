@@ -66,6 +66,62 @@ def shimmer_apq3(amplitudes: torch.Tensor) -> torch.Tensor:
         
     return numerator / mean_amp * 100.0
 
+def shimmer_apq5(amplitudes: torch.Tensor) -> torch.Tensor:
+    """
+    Compute Shimmer (APQ5): Amplitude Perturbation Quotient (5-point).
+    Average absolute difference between an amplitude and the average of it and
+    its four nearest neighbours, divided by the average amplitude.
+    """
+    N = amplitudes.shape[-1]
+    if N < 5:
+        return torch.tensor(0.0, device=amplitudes.device)
+
+    kernel = torch.ones(5, device=amplitudes.device) / 5.0
+    avg_5 = torch.nn.functional.conv1d(
+        amplitudes.view(1, 1, -1),
+        kernel.view(1, 1, -1),
+        padding=0,
+    ).view(-1)
+
+    # conv output (length N-4) aligns with amplitudes[2:-2]
+    center_amps = amplitudes[2:-2]
+
+    numerator = torch.abs(center_amps - avg_5).mean()
+    mean_amp = amplitudes.mean()
+
+    if mean_amp == 0:
+        return torch.tensor(0.0, device=amplitudes.device)
+
+    return numerator / mean_amp * 100.0
+
+def shimmer_apq11(amplitudes: torch.Tensor) -> torch.Tensor:
+    """
+    Compute Shimmer (APQ11): Amplitude Perturbation Quotient (11-point).
+    Average absolute difference between an amplitude and the average of it and
+    its ten nearest neighbours, divided by the average amplitude.
+    """
+    N = amplitudes.shape[-1]
+    if N < 11:
+        return torch.tensor(0.0, device=amplitudes.device)
+
+    kernel = torch.ones(11, device=amplitudes.device) / 11.0
+    avg_11 = torch.nn.functional.conv1d(
+        amplitudes.view(1, 1, -1),
+        kernel.view(1, 1, -1),
+        padding=0,
+    ).view(-1)
+
+    # conv output (length N-10) aligns with amplitudes[5:-5]
+    center_amps = amplitudes[5:-5]
+
+    numerator = torch.abs(center_amps - avg_11).mean()
+    mean_amp = amplitudes.mean()
+
+    if mean_amp == 0:
+        return torch.tensor(0.0, device=amplitudes.device)
+
+    return numerator / mean_amp * 100.0
+
 def shimmer_dda(amplitudes: torch.Tensor) -> torch.Tensor:
     """
     Compute Shimmer (DDA): Difference of Differences of Amplitudes.

@@ -31,6 +31,15 @@ def key_detect(
 ) -> str:
     """
     Detect key using Krumhansl-Schmuckler template matching on chroma features.
+
+    The reported match score is the **Pearson correlation** between the
+    z-scored mean chroma vector and each rotated z-scored key template; the
+    key with the highest correlation is returned.
+
+    Degenerate input is handled explicitly: silence or a near-constant chroma
+    profile (no pitch-class contrast, e.g. a single pure tone smeared equally
+    or a DC/empty signal) carries no key information, so ``"Unknown"`` is
+    returned instead of a confidently-wrong label.
     """
     if sample_rate <= 0:
         raise ValueError("sample_rate must be > 0.")
@@ -47,7 +56,28 @@ def key_detect(
     if chroma_feat.numel() == 0:
         return "Unknown"
 
-    chroma_vec = _zscore(chroma_feat.mean(dim=1))
+    mean_chroma = chroma_feat.mean(dim=1)
+    # Guard degenerate input: a silent signal or a chroma profile with no
+    # contrast across pitch classes yields no usable key estimate.
+    #   * non-finite          -> bad input
+    #   * ~zero magnitude      -> silence
+    #   * low relative spread  -> near-flat chroma (DC / equal-energy smear /
+    #     a single pure tone), which carries no key information. We use the
+    #     coefficient of variation (std / |mean|) because chroma is L-inf
+    #     normalised: a real key profile is strongly peaked (CoV ~> 1) whereas
+    #     a flat profile has CoV close to 0.
+    if not torch.all(torch.isfinite(mean_chroma)):
+        return "Unknown"
+    chroma_mean = float(mean_chroma.mean().item())
+    chroma_std = float(mean_chroma.std(unbiased=False).item())
+    if mean_chroma.abs().max().item() < 1e-8:
+        return "Unknown"
+    if chroma_std < 1e-6:
+        return "Unknown"
+    if chroma_std / (abs(chroma_mean) + 1e-12) < 0.2:
+        return "Unknown"
+
+    chroma_vec = _zscore(mean_chroma)
     major_tpl = _zscore(_MAJOR_TEMPLATE.to(chroma_vec.device))
     minor_tpl = _zscore(_MINOR_TEMPLATE.to(chroma_vec.device))
 

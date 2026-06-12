@@ -1,5 +1,7 @@
 import torch
 
+__all__ = ["teager_energy_operator"]
+
 
 def teager_energy_operator(x: torch.Tensor) -> torch.Tensor:
     """Compute the average *Teager Energy* of a signal.

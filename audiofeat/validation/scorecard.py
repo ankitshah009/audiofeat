@@ -179,7 +179,7 @@ def run_gold_standard_scorecard(
                 "measured_hz": measured_centroid,
                 "expected_hz": tone_freq,
                 "absolute_error_hz": centroid_abs_err,
-                "threshold_hz": 60.0,
+                "threshold_hz": 30.0,
             },
         )
     )
@@ -248,34 +248,50 @@ def run_gold_standard_scorecard(
         )
 
     # 6) Formant sanity on a deterministic speech-like signal.
-    speech_like = _speech_like_signal(sample_rate=sample_rate)
-    formants = formant_frequencies(
-        speech_like,
-        fs=sample_rate,
-        order=12,
-        num_formants=3,
-        max_formant=5000.0,
-        method="burg",
-    )
-    f1, f2, f3 = [float(formants[i].item()) for i in range(3)]
-    finite = all(np.isfinite(v) for v in (f1, f2, f3))
-    ordered = f1 < f2 < f3
-    plausible = 150.0 <= f1 <= 1200.0 and 500.0 <= f2 <= 3200.0
-    checks.append(
-        _check_result(
-            name="formant_monotonicity_plausibility",
-            max_points=10.0,
-            passed=finite and ordered and plausible,
-            details={
-                "f1_hz": f1,
-                "f2_hz": f2,
-                "f3_hz": f3,
-                "finite": finite,
-                "ordered": ordered,
-                "plausible": plausible,
-            },
+    # The speech-like signal is shaped with scipy IIR peaking filters. If scipy
+    # is unavailable, skip this check (and reuse the unshaped source elsewhere).
+    scipy_available = _is_module_available("scipy")
+    if scipy_available:
+        speech_like = _speech_like_signal(sample_rate=sample_rate)
+        formants = formant_frequencies(
+            speech_like,
+            fs=sample_rate,
+            order=12,
+            num_formants=3,
+            max_formant=5000.0,
+            method="burg",
         )
-    )
+        f1, f2, f3 = [float(formants[i].item()) for i in range(3)]
+        finite = all(np.isfinite(v) for v in (f1, f2, f3))
+        ordered = f1 < f2 < f3
+        plausible = 150.0 <= f1 <= 1200.0 and 500.0 <= f2 <= 3200.0
+        checks.append(
+            _check_result(
+                name="formant_monotonicity_plausibility",
+                max_points=10.0,
+                passed=finite and ordered and plausible,
+                details={
+                    "f1_hz": f1,
+                    "f2_hz": f2,
+                    "f3_hz": f3,
+                    "finite": finite,
+                    "ordered": ordered,
+                    "plausible": plausible,
+                },
+            )
+        )
+    else:
+        speech_like = None
+        checks.append(
+            _check_result(
+                name="formant_monotonicity_plausibility",
+                max_points=10.0,
+                passed=False,
+                skipped=True,
+                reason="scipy is not installed; speech-like signal shaping unavailable.",
+                details={},
+            )
+        )
 
     librosa_available = _is_module_available("librosa")
     parselmouth_available = _is_module_available("parselmouth")
@@ -320,7 +336,7 @@ def run_gold_standard_scorecard(
         )
 
     # 8/9) Optional Praat alignment checks.
-    if include_optional and parselmouth_available:
+    if include_optional and parselmouth_available and speech_like is not None:
         pitch_method = "pyin" if librosa_available else "yin"
         cleanup_path = False
         if praat_audio_path is None:

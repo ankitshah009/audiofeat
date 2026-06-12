@@ -15,6 +15,8 @@ from __future__ import annotations
 import torch
 import torchaudio.transforms as T
 
+__all__ = ["tristimulus"]
+
 
 def _estimate_f0_autocorr(
     waveform: torch.Tensor,

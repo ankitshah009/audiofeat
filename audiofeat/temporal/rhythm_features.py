@@ -4,6 +4,8 @@ import torch
 
 from .beat import beat_track as _beat_track_frames
 
+__all__ = ["tempo", "beat_track"]
+
 
 def tempo(
     audio_data: torch.Tensor,

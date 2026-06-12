@@ -56,6 +56,8 @@ def spectral_sharpness(
     """
     if x.dim() != 1:
         raise ValueError("`spectral_sharpness` expects a 1-D mono signal.")
+    if x.numel() < 2:
+        return torch.tensor(0.0, device=x.device)
 
     # Window and FFT
     windowed = x * hann_window(x.numel()).to(x.device)

@@ -1,58 +1,65 @@
 import torch
-import torchaudio
+
+__all__ = ["temporal_centroid"]
+
 
 def temporal_centroid(waveform: torch.Tensor, sample_rate: int) -> torch.Tensor:
     """
-    Computes the temporal centroid of an audio waveform.
+    Compute the MPEG-7 temporal centroid of an audio waveform.
 
-    The temporal centroid is a measure of the "center of mass" of the
-    signal's amplitude envelope. A higher value indicates that the
-    energy of the sound is concentrated towards the end of the sound.
+    The temporal centroid is the energy-weighted mean **time** (the
+    "center of mass" of the signal-energy envelope along the time axis),
+    returned in **seconds**:
+
+    ``TC = sum_n( t[n] * env[n] ) / sum_n( env[n] )``
+
+    where ``t[n] = n / sample_rate`` and ``env[n]`` is the local energy
+    (``waveform[n] ** 2``). A higher value means the energy is concentrated
+    later in the sound. This matches the MPEG-7 ``TemporalCentroid``
+    descriptor, which is defined in seconds using the sampling rate.
 
     Parameters
     ----------
     waveform : torch.Tensor
-        Mono audio waveform tensor. Expected shape: (num_samples,) or (1, num_samples).
+        Mono audio waveform. Shape ``(num_samples,)`` or ``(1, num_samples)``
+        (the first channel is used for multi-channel input).
     sample_rate : int
-        Sampling rate of the waveform.
+        Sampling rate of the waveform, in Hz.
 
     Returns
     -------
     torch.Tensor
-        A scalar tensor representing the temporal centroid.
+        A scalar tensor: the temporal centroid in seconds (0.0 for a
+        silent / zero-energy signal).
 
     Notes
     -----
-    This implementation assumes the input waveform is a single channel.
-    For multi-channel audio, you might need to process each channel
-    separately or average them.
-    Requires 'torch' and 'torchaudio' to be installed.
+    The previous implementation ignored ``sample_rate`` and weighted by
+    ``|waveform|`` (amplitude) in **samples**; this version follows MPEG-7
+    by weighting with energy (``waveform ** 2``) and scaling the time axis
+    by ``1 / sample_rate`` so the result is in seconds.
     """
     if waveform.ndim > 1 and waveform.shape[0] > 1:
-        # Assuming mono or taking the first channel if multi-channel
+        # Multi-channel: use the first channel.
         waveform = waveform[0]
     elif waveform.ndim == 0:
         raise ValueError("Input waveform cannot be a scalar.")
 
-    # Calculate the amplitude envelope (absolute value of the waveform)
-    amplitude_envelope = torch.abs(waveform)
+    waveform = waveform.flatten().float()
+    if sample_rate <= 0:
+        raise ValueError("sample_rate must be > 0.")
 
-    # Create a time index tensor
-    time_indices = torch.arange(len(amplitude_envelope), dtype=torch.float32, device=waveform.device)
+    # Signal energy envelope (MPEG-7 weights by energy, not |amplitude|).
+    energy_env = waveform ** 2
 
-    # Calculate the weighted sum of time indices by amplitude
-    weighted_sum = torch.sum(time_indices * amplitude_envelope)
+    total_energy = torch.sum(energy_env)
+    if total_energy == 0:
+        return torch.tensor(0.0, device=waveform.device)  # Avoid division by zero.
 
-    # Calculate the sum of amplitudes
-    sum_amplitudes = torch.sum(amplitude_envelope)
+    # Time index in SECONDS (this is the MPEG-7 definition; uses sample_rate).
+    time_seconds = torch.arange(
+        waveform.numel(), dtype=torch.float32, device=waveform.device
+    ) / float(sample_rate)
 
-    if sum_amplitudes == 0:
-        return torch.tensor(0.0, device=waveform.device) # Avoid division by zero
-
-    # Temporal Centroid = (sum of (time_index * amplitude)) / (sum of amplitudes)
-    temporal_c = weighted_sum / sum_amplitudes
-
-    # Convert to seconds if desired, by dividing by sample_rate,
-    # but typically it's returned in samples or normalized.
-    # For consistency with some definitions, we return in samples.
+    temporal_c = torch.sum(time_seconds * energy_env) / total_energy
     return temporal_c

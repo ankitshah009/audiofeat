@@ -40,20 +40,23 @@ def predict_crepe(
         num_frames = audio.shape[-1] // 160
         return torch.zeros((audio.shape[0], num_frames), device=audio.device)
 
-    # Resample if necessary (CREPE expects 16kHz)
+    # Resample if necessary (CREPE expects 16kHz). Actually resample instead of
+    # only warning, otherwise non-16k input yields wrong pitch.
     if sample_rate != 16000:
-        warnings.warn("CREPE requires 16kHz audio. Please resample.")
-        # In real code: audio = torchaudio.transforms.Resample(sample_rate, 16000)(audio)
+        import torchaudio
+        audio = torchaudio.functional.resample(audio, sample_rate, 16000)
+        sample_rate = 16000
 
     f0 = torchcrepe.predict(
-        audio, 
-        sample_rate, 
-        hop_length=160, 
-        fmin=50, 
-        fmax=2000, 
-        model=model_capacity, 
-        decoder=torchcrepe.decode.viterbi, 
-        return_harmonicity=False
+        audio,
+        sample_rate,
+        hop_length=160,
+        fmin=50,
+        fmax=2000,
+        model=model_capacity,
+        decoder=torchcrepe.decode.viterbi,
+        # torchcrepe exposes ``return_periodicity`` (not ``return_harmonicity``).
+        return_periodicity=False,
     )
-    
+
     return f0
