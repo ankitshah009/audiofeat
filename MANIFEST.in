@@ -1,11 +1,11 @@
 # Include important documentation and configuration files
 include README.md
 include LICENSE.md
-include CRUSH.md
 include pyproject.toml
 include setup.py
 
 # Include package data
+include audiofeat/py.typed
 recursive-include audiofeat *.py
 recursive-include audiofeat *.pyi
 

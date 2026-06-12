@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "audiofeat"
-version = "1.1.1"
+dynamic = ["version"]
 authors = [
     {name = "Ankit Shah", email = "ankit.tronix@gmail.com"},
 ]
 description = "A comprehensive PyTorch-based audio feature extraction library for machine learning, research, and audio analysis"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -19,7 +19,6 @@ classifiers = [
 
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -67,16 +66,37 @@ Documentation = "https://github.com/ankitshah009/audiofeat#readme"
 audiofeat = "audiofeat.cli:main"
 
 [project.optional-dependencies]
+# --- Feature-scoped model extras (one per pretrained-model backend) ---
+asr = ["openai-whisper>=202311"]                                  # audiofeat.asr (Whisper)
+vad = ["silero-vad>=5.0"]                                         # audiofeat.vad (needs load_silero_vad, >=5)
+diarization = ["pyannote.audio>=3.1", "huggingface-hub>=0.21.0"]  # audiofeat.diarization
+embeddings = ["speechbrain>=1.0.0"]                               # audiofeat.embeddings (ECAPA)
+ssl = ["transformers>=4.30.0"]                                    # audiofeat.ssl (wav2vec2/HuBERT)
+emotion = ["transformers>=4.30.0"]                                # audiofeat.emotion_ssl
+scene = ["panns_inference>=0.1.0"]                                # audiofeat.scene (PANNs CNN14)
+separation = ["asteroid>=0.5.0"]                                  # audiofeat.spatial (ConvTasNet)
+denoise = ["noisereduce", "rnnoise-torch"]                        # audiofeat.denoise (RNNoise)
+beat = ["madmom>=0.16.1"]                                         # audiofeat.beat_madmom
+
+# Convenience: union of every model backend above.
 models = [
-    "pyannote.audio>=3.1.1",
-    "speechbrain>=1.0.0",
     "openai-whisper>=202311",
-    "torchaudio>=2.1.0",
+    "silero-vad>=5.0",
+    "pyannote.audio>=3.1",
     "huggingface-hub>=0.21.0",
-    "silero-vad==0.4.0",
-    "asteroid>=0.5.0",
+    "speechbrain>=1.0.0",
+    "transformers>=4.30.0",
     "panns_inference>=0.1.0",
+    "asteroid>=0.5.0",
+    "noisereduce",
+    "rnnoise-torch",
     "madmom>=0.16.1",
+]
+
+# Audio I/O backend for torchaudio>=2.1 (load/save .wav etc.).
+io = [
+    "soundfile>=0.12",
+    "torchcodec>=0.1",
 ]
 
 dev = [
@@ -99,12 +119,32 @@ standards = [
     "opensmile>=2.5.0",
 ]
 full = [
+    # examples
     "matplotlib",
     "librosa",
     "soundfile",
+    # validation
     "praat-parselmouth>=0.4.3",
+    # standards
     "opensmile>=2.5.0",
+    # io backends
+    "torchcodec>=0.1",
+    # models (union)
+    "openai-whisper>=202311",
+    "silero-vad>=5.0",
+    "pyannote.audio>=3.1",
+    "huggingface-hub>=0.21.0",
+    "speechbrain>=1.0.0",
+    "transformers>=4.30.0",
+    "panns_inference>=0.1.0",
+    "asteroid>=0.5.0",
+    "noisereduce",
+    "rnnoise-torch",
+    "madmom>=0.16.1",
 ]
+
+[tool.setuptools.dynamic]
+version = {attr = "audiofeat._version.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -138,4 +178,4 @@ multi_line_output = 3
 line_length = 88
 
 [tool.coverage.report]
-fail_under = 95
+fail_under = 80

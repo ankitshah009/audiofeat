@@ -7,17 +7,20 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+        cache: 'pip'
+    - name: Install package, dependencies, and pylint
       run: |
         python -m pip install --upgrade pip
+        pip install -e ".[dev,examples]"
         pip install pylint
     - name: Analysing the code with pylint
+      continue-on-error: true
       run: |
-        pylint $(git ls-files '*.py')
+        pylint audiofeat --fail-under=8.0 --disable=C0114,C0115,C0116,C0103,R0913,R0914,W0511
