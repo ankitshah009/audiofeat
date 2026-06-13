@@ -5,6 +5,24 @@ All notable changes to **audiofeat** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-06-12
+
+Raises the supported Python floor to 3.14.
+
+### Changed
+
+- **Python 3.14 is now required** (`requires-python = ">=3.14"`). Earlier
+  versions (3.9–3.13) are no longer supported; `pip` will keep serving 1.2.0 to
+  those interpreters, so existing installs are unaffected. The full test suite
+  (352 passed, 1 skipped) and the gold-standard score gate pass on 3.14, and the
+  CI test/lint matrices and the `black` formatting target now pin 3.14.
+
+### Internal
+
+- Added `from __future__ import annotations` to the few modules that use PEP 604
+  (`X | None`) and builtin-generic annotations, so annotation evaluation is
+  deferred and import time is marginally lower.
+
 ## [1.2.0] - 2026-06-12
 
 This release makes the public API consistent and importable, corrects several
