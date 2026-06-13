@@ -19,6 +19,8 @@ imported here so that ``import audiofeat`` never pulls in optional dependencies.
 Access them explicitly, e.g. ``from audiofeat.asr import transcribe``.
 """
 
+from __future__ import annotations
+
 from ._version import __version__
 
 # --- Core feature subpackages (eagerly imported, lightweight) -----------------
