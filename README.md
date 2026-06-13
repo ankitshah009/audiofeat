@@ -214,7 +214,7 @@ include `asr`, `vad`, `diarization`, `embeddings`, `ssl`, `emotion`, `scene`,
 
 ## Installation
 
-Python `>=3.9` is required. We recommend creating a virtual environment first.
+Python `>=3.14` is required. We recommend creating a virtual environment first.
 
 ### pip (from PyPI)
 
@@ -252,7 +252,7 @@ source .venv/bin/activate
 pip install audiofeat
 
 # Option B: conda
-conda create -n audiofeat python=3.11 -y
+conda create -n audiofeat python=3.14 -y
 conda activate audiofeat
 pip install audiofeat
 
